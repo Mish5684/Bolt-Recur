@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 16.26.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "simulator": {
+          "developmentClient": true,
+          "distribution": "internal",
+          // Set to 'none' or 'adhoc' if you only want a simulator build
+          // The key is that the build machine itself isn't required to sign it strictly.
+          "ios": {
+            "buildConfiguration": "Debug",
+            "simulator": true
+          }
+        },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
