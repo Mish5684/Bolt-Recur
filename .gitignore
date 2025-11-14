@@ -8,6 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# EXCEPTION: Force Git to track the patched GoTrueClient file to fix the WebAuthn crash in Hermes.
+!/node_modules/@supabase/gotrue-js/dist/main/GoTrueClient.js
+
 dist
 dist-ssr
 *.local
