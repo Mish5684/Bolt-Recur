@@ -13,6 +13,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
+    // 🟢 ADD THIS LINE TO DISABLE WEBAUTHN INIT AND USE MOBILE-STANDARD FLOW
+    flowType: 'pkce',
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
