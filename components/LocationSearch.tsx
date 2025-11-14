@@ -65,8 +65,11 @@ export default function LocationSearch({
         GooglePlacesDetailsQuery={{
           fields: 'geometry,name,formatted_address,address_components,place_id',
         }}
-        nearbyPlacesAPI="GooglePlacesSearch"
-        disableScroll={false}
+     nearbyPlacesAPI="GooglePlacesSearch"
+listViewDisplayed="auto"
+keyboardShouldPersistTaps="handled"
+listUnderlayColor="#F3F4F6"
+numberOfLines={1}
       />
       {!GOOGLE_PLACES_API_KEY && (
         <View style={styles.warningContainer}>
@@ -104,13 +107,23 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   listView: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    maxHeight: 300,
-  },
+  backgroundColor: '#FFFFFF',
+  borderRadius: 12,
+  marginTop: 8,
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+  maxHeight: 250,
+  elevation: 5,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  position: 'absolute',
+  top: 56,
+  left: 0,
+  right: 0,
+  zIndex: 1000,
+},
   row: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 12,
