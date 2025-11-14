@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Recur",
+    "slug": "recur-class-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.recur.classtracker",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show distance to class venues and provide navigation.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to your location to show distance to class venues and provide navigation."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyCZS7VNHWj1YPC8C5v-oUUitJBRLKJWne8"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.recur.classtracker",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAnVf3O0cWzLcbrJ4f0FXDLuvF_hl4wxlQ"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "recur-class-tracker"
+      }
+    }
+  }
+}

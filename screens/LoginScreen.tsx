@@ -1,0 +1,204 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { useAuth } from '../shared/stores/auth';
+
+export default function LoginScreen({ navigation }: any) {
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const { sendOTP, verifyOTP, loading, error } = useAuth();
+
+  const handleSendOTP = async () => {
+    if (!email) return;
+    const success = await sendOTP(email);
+    if (success) {
+      setOtpSent(true);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!email || !otp) return;
+    const success = await verifyOTP(email, otp);
+    if (success) {
+      navigation.replace('Home');
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Recur</Text>
+          <Text style={styles.subtitle}>Track your recurring classes</Text>
+        </View>
+
+        <View style={styles.form}>
+          {!otpSent ? (
+            <>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
+              />
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleSendOTP}
+                disabled={loading || !email}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.buttonText}>Send Code</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.label}>Verification Code</Text>
+              <Text style={styles.helperText}>
+                We sent a code to {email}
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter 6-digit code"
+                placeholderTextColor="#9CA3AF"
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="number-pad"
+                maxLength={6}
+                editable={!loading}
+              />
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleVerifyOTP}
+                disabled={loading || !otp}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.buttonText}>Verify & Login</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={() => setOtpSent(false)}
+                disabled={loading}
+              >
+                <Text style={styles.linkText}>Use different email</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  header: {
+    marginBottom: 48,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  form: {
+    width: '100%',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  helperText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#1F2937',
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: '#6B7280',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  linkButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  linkText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  errorContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+  },
+});
