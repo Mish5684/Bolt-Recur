@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -47,8 +47,12 @@ const generateTimeSlots = () => {
 
 const TIME_SLOTS = generateTimeSlots();
 
-export default function AddClassScreen({ route, navigation }: any) {
-  const { memberId } = route.params;
+export default function EditClassScreen({ route, navigation }: any) {
+  const { classId } = route.params;
+  const { classes, updateClass, loading } = useRecur();
+
+  const classData = classes.find((c) => c.id === classId);
+
   const [className, setClassName] = useState('');
   const [classType, setClassType] = useState('');
   const [instructor, setInstructor] = useState('');
@@ -60,7 +64,26 @@ export default function AddClassScreen({ route, navigation }: any) {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [currentDay, setCurrentDay] = useState('');
 
-  const { addClass, subscribeToClass, loading } = useRecur();
+  useEffect(() => {
+    if (classData) {
+      setClassName(classData.name);
+      setClassType(classData.type || '');
+      setInstructor(classData.instructor || '');
+      setSchedule(classData.schedule || []);
+      if (classData.latitude && classData.longitude) {
+        setLocation({
+          location_name: classData.location_name,
+          address: classData.address,
+          latitude: classData.latitude,
+          longitude: classData.longitude,
+          pincode: classData.pincode,
+          city: classData.city,
+          country: classData.country,
+          place_id: classData.place_id,
+        });
+      }
+    }
+  }, [classData]);
 
   const handleAddSchedule = (day: string) => {
     setCurrentDay(day);
@@ -85,30 +108,28 @@ export default function AddClassScreen({ route, navigation }: any) {
   };
 
   const handleSave = async () => {
-    if (!className.trim() || !classType.trim()) {
-      alert('Please fill in all required fields');
+    if (!className.trim()) {
+      alert('Please enter a class name');
       return;
     }
 
-    const classId = await addClass({
+    const updateData: any = {
       name: className.trim(),
-      type: classType,
-      instructor: instructor.trim() || undefined,
-      schedule: schedule.length > 0 ? schedule : undefined,
-      ...(location && {
-        location_name: location.location_name,
-        address: location.address,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        pincode: location.pincode,
-        city: location.city,
-        country: location.country,
-        place_id: location.place_id,
-      }),
-    });
+      type: classType || null,
+      instructor: instructor.trim() || null,
+      schedule: schedule.length > 0 ? schedule : null,
+      location_name: location?.location_name || null,
+      address: location?.address || null,
+      latitude: location?.latitude || null,
+      longitude: location?.longitude || null,
+      pincode: location?.pincode || null,
+      city: location?.city || null,
+      country: location?.country || null,
+      place_id: location?.place_id || null,
+    };
 
-    if (classId) {
-      await subscribeToClass(memberId, classId);
+    const success = await updateClass(classId, updateData);
+    if (success) {
       navigation.goBack();
     }
   };
@@ -117,10 +138,13 @@ export default function AddClassScreen({ route, navigation }: any) {
     navigation.goBack();
   };
 
-  const formatScheduleDisplay = () => {
-    if (schedule.length === 0) return 'No schedule set';
-    return schedule.map(s => `${s.day} ${s.time}`).join(', ');
-  };
+  if (!classData) {
+    return (
+      <View style={styles.container}>
+        <Text>Class not found</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -129,7 +153,7 @@ export default function AddClassScreen({ route, navigation }: any) {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Add Class</Text>
+          <Text style={styles.backText}>‹ Edit Class</Text>
         </TouchableOpacity>
       </View>
 
@@ -146,7 +170,7 @@ export default function AddClassScreen({ route, navigation }: any) {
               editable={!loading}
             />
 
-            <Text style={styles.label}>Class Type *</Text>
+            <Text style={styles.label}>Class Type</Text>
             <TouchableOpacity
               style={styles.input}
               onPress={() => setShowTypeModal(true)}
@@ -157,7 +181,7 @@ export default function AddClassScreen({ route, navigation }: any) {
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.label}>Instructor (Optional)</Text>
+            <Text style={styles.label}>Instructor</Text>
             <TextInput
               style={styles.input}
               placeholder="Instructor name"
@@ -167,7 +191,7 @@ export default function AddClassScreen({ route, navigation }: any) {
               editable={!loading}
             />
 
-            <Text style={styles.label}>Schedule (Optional)</Text>
+            <Text style={styles.label}>Schedule</Text>
             <TouchableOpacity
               style={styles.scheduleButton}
               onPress={() => setShowDayModal(true)}
@@ -189,7 +213,7 @@ export default function AddClassScreen({ route, navigation }: any) {
               </View>
             )}
 
-            <Text style={styles.label}>Location (Optional)</Text>
+            <Text style={styles.label}>Location</Text>
             <View style={styles.locationSearchContainer}>
               <LocationSearch
                 onLocationSelect={(locationData) => setLocation(locationData)}
@@ -221,12 +245,12 @@ export default function AddClassScreen({ route, navigation }: any) {
         <TouchableOpacity
           style={[styles.saveButton, loading && styles.buttonDisabled]}
           onPress={handleSave}
-          disabled={loading || !className.trim() || !classType.trim()}
+          disabled={loading || !className.trim()}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.saveButtonText}>Add Class</Text>
+            <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -385,17 +409,6 @@ const styles = StyleSheet.create({
   },
   flexColumn: {
     flex: 1,
-  },
-  priceInfo: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-  },
-  priceInfoText: {
-    fontSize: 14,
-    color: '#2563EB',
-    fontWeight: '500',
   },
   scheduleButton: {
     backgroundColor: '#F3F4F6',
