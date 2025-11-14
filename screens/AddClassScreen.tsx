@@ -29,7 +29,6 @@ const CLASS_TYPES = [
   'Other',
 ];
 
-
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const generateTimeSlots = () => {
@@ -134,87 +133,89 @@ export default function AddClassScreen({ route, navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.form}>
-          <Text style={styles.label}>Class Name *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., Piano Lessons, Yoga, Swimming"
-            placeholderTextColor="#9CA3AF"
-            value={className}
-            onChangeText={setClassName}
-            editable={!loading}
-          />
-
-          <Text style={styles.label}>Class Type *</Text>
-          <TouchableOpacity
-            style={styles.input}
-            onPress={() => setShowTypeModal(true)}
-            disabled={loading}
-          >
-            <Text style={classType ? styles.inputText : styles.placeholderText}>
-              {classType || 'Select class type'}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Instructor (Optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Instructor name"
-            placeholderTextColor="#9CA3AF"
-            value={instructor}
-            onChangeText={setInstructor}
-            editable={!loading}
-          />
-
-          <Text style={styles.label}>Schedule (Optional)</Text>
-          <TouchableOpacity
-            style={styles.scheduleButton}
-            onPress={() => setShowDayModal(true)}
-            disabled={loading}
-          >
-            <Text style={styles.scheduleButtonText}>+ Add Day/Time</Text>
-          </TouchableOpacity>
-
-          {schedule.length > 0 && (
-            <View style={styles.scheduleList}>
-              {schedule.map((item, index) => (
-                <View key={index} style={styles.scheduleChip}>
-                  <Text style={styles.scheduleChipText}>{item.day} {item.time}</Text>
-                  <TouchableOpacity onPress={() => handleRemoveSchedule(index)}>
-                    <Text style={styles.scheduleChipRemove}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <Text style={styles.label}>Location (Optional)</Text>
-          <View style={styles.locationSearchContainer}>
-            <LocationSearch
-              onLocationSelect={(locationData) => setLocation(locationData)}
-              placeholder="Search for class location (e.g., Artstation Khar)"
-              disabled={loading}
+      <View style={styles.content}>
+        <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
+          <View style={styles.form}>
+            <Text style={styles.label}>Class Name *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Piano Lessons, Yoga, Swimming"
+              placeholderTextColor="#9CA3AF"
+              value={className}
+              onChangeText={setClassName}
+              editable={!loading}
             />
-          </View>
-          {location && (
-            <View style={styles.locationSelectedContainer}>
-              <Text style={styles.locationSelectedIcon}>📍</Text>
-              <View style={styles.locationSelectedInfo}>
-                <Text style={styles.locationSelectedName}>{location.location_name}</Text>
-                {location.address && (
-                  <Text style={styles.locationSelectedAddress} numberOfLines={2}>
-                    {location.address}
-                  </Text>
-                )}
+
+            <Text style={styles.label}>Class Type *</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowTypeModal(true)}
+              disabled={loading}
+            >
+              <Text style={classType ? styles.inputText : styles.placeholderText}>
+                {classType || 'Select class type'}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.label}>Instructor (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Instructor name"
+              placeholderTextColor="#9CA3AF"
+              value={instructor}
+              onChangeText={setInstructor}
+              editable={!loading}
+            />
+
+            <Text style={styles.label}>Schedule (Optional)</Text>
+            <TouchableOpacity
+              style={styles.scheduleButton}
+              onPress={() => setShowDayModal(true)}
+              disabled={loading}
+            >
+              <Text style={styles.scheduleButtonText}>+ Add Day/Time</Text>
+            </TouchableOpacity>
+
+            {schedule.length > 0 && (
+              <View style={styles.scheduleList}>
+                {schedule.map((item, index) => (
+                  <View key={index} style={styles.scheduleChip}>
+                    <Text style={styles.scheduleChipText}>{item.day} {item.time}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveSchedule(index)}>
+                      <Text style={styles.scheduleChipRemove}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </View>
-              <TouchableOpacity onPress={() => setLocation(null)} style={styles.locationRemoveButton}>
-                <Text style={styles.locationRemoveText}>×</Text>
-              </TouchableOpacity>
+            )}
+
+            <Text style={styles.label}>Location (Optional)</Text>
+            <View style={styles.locationSearchContainer}>
+              <LocationSearch
+                onLocationSelect={(locationData) => setLocation(locationData)}
+                placeholder="Search for class location (e.g., Artstation Khar)"
+                disabled={loading}
+              />
             </View>
-          )}
-        </View>
-      </ScrollView>
+            {location && (
+              <View style={styles.locationSelectedContainer}>
+                <Text style={styles.locationSelectedIcon}>📍</Text>
+                <View style={styles.locationSelectedInfo}>
+                  <Text style={styles.locationSelectedName}>{location.location_name}</Text>
+                  {location.address && (
+                    <Text style={styles.locationSelectedAddress} numberOfLines={2}>
+                      {location.address}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity onPress={() => setLocation(null)} style={styles.locationRemoveButton}>
+                  <Text style={styles.locationRemoveText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -347,6 +348,9 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   content: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   form: {
