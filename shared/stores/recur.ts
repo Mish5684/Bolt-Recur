@@ -21,6 +21,8 @@ interface RecurStore {
   memberClassCounts: { [memberId: string]: number };
   loading: boolean;
   error: string | null;
+  hasFamilyMembers: boolean;
+  hasClasses: boolean;
   fetchClasses: () => Promise<void>;
   fetchAllFamilyMembers: () => Promise<void>;
   fetchAllAttendance: () => Promise<ClassAttendance[]>;
@@ -33,6 +35,7 @@ interface RecurStore {
   fetchAttendanceForClass: (memberId: string, classId: string) => Promise<ClassAttendance[]>;
   fetchPaymentsForClass: (memberId: string, classId: string) => Promise<Payment[]>;
   fetchCostPerClassForMember: (memberId: string) => Promise<{ [classId: string]: CostPerClass }>;
+  checkOnboardingStatus: () => Promise<void>;
   addFamilyMember: (member: { name: string; avatar: string; relation: string }) => Promise<string | null>;
   updateFamilyMember: (memberId: string, member: { name: string; avatar: string; relation: string }) => Promise<boolean>;
   deleteFamilyMember: (memberId: string) => Promise<boolean>;
@@ -57,6 +60,8 @@ export const useRecur = create<RecurStore>((set, get) => ({
   memberClassCounts: {},
   loading: false,
   error: null,
+  hasFamilyMembers: false,
+  hasClasses: false,
 
   fetchClasses: async () => {
     try {
@@ -68,6 +73,7 @@ export const useRecur = create<RecurStore>((set, get) => ({
 
       if (error) throw error;
       set({ classes: data || [] });
+      await get().checkOnboardingStatus();
     } catch (error) {
       set({ error: (error as Error).message });
     } finally {
@@ -84,9 +90,10 @@ export const useRecur = create<RecurStore>((set, get) => ({
         .order('name');
 
       if (error) throw error;
-      set({ familyMembers: data || [] });
+      set({ familyMembers: data || [], hasFamilyMembers: (data?.length || 0) > 0 });
 
       await get().fetchMemberClassCounts();
+      await get().checkOnboardingStatus();
     } catch (error) {
       set({ error: (error as Error).message });
     } finally {
@@ -113,8 +120,35 @@ export const useRecur = create<RecurStore>((set, get) => ({
       }
 
       set({ memberClassCounts: counts });
+      await get().checkOnboardingStatus();
     } catch (error) {
       console.error('Error fetching member class counts:', error);
+    }
+  },
+
+  checkOnboardingStatus: async () => {
+    try {
+      const { data: membersData, error: membersError } = await supabase
+        .from('family_members')
+        .select('id')
+        .limit(1);
+
+      if (membersError) throw membersError;
+
+      const hasFamilyMembers = (membersData?.length || 0) > 0;
+
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select('id')
+        .limit(1);
+
+      if (classesError) throw classesError;
+
+      const hasClasses = (classesData?.length || 0) > 0;
+
+      set({ hasFamilyMembers, hasClasses });
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
     }
   },
 

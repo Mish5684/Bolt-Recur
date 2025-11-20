@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useAuth } from '../shared/stores/auth';
 
@@ -40,8 +41,13 @@ export default function LoginScreen({ navigation }: any) {
     >
       <View style={styles.content}>
         <View style={styles.header}>
+          <Image
+            source={require('../assets/icon.png')}
+            style={styles.icon}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Recur</Text>
-          <Text style={styles.subtitle}>Track your recurring classes</Text>
+          <Text style={styles.subtitle}>Organize your classes, keep your rhythm.</Text>
         </View>
 
         <View style={styles.form}>
@@ -133,16 +139,24 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 48,
+    alignItems: 'center',
+  },
+  icon: {
+    width: 90,
+    height: 90,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#6B7280',
+    textAlign: 'center',
   },
   form: {
     width: '100%',

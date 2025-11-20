@@ -14,17 +14,35 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRecur } from '../shared/stores/recur';
 import { FamilyMember } from '../shared/types/database';
+import OnboardingPrompt from '../components/OnboardingPrompt';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen({ navigation }: any) {
-  const { familyMembers, memberClassCounts, fetchAllFamilyMembers, deleteFamilyMember, loading } = useRecur();
+  const {
+    familyMembers,
+    memberClassCounts,
+    hasFamilyMembers,
+    hasClasses,
+    fetchAllFamilyMembers,
+    deleteFamilyMember,
+    checkOnboardingStatus,
+    loading
+  } = useRecur();
   const [menuVisibleForMember, setMenuVisibleForMember] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      checkOnboardingStatus();
+    }, [])
+  );
+
   const loadData = async () => {
     await fetchAllFamilyMembers();
+    await checkOnboardingStatus();
   };
 
   const onRefresh = async () => {
@@ -142,14 +160,38 @@ export default function HomeScreen({ navigation }: any) {
         <Text style={styles.subtitle}>Track your recurring classes</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate('AddFamilyMember')}
-      >
-        <Text style={styles.addButtonText}>+ Add Family Member</Text>
-      </TouchableOpacity>
+      {!hasFamilyMembers && (
+        <OnboardingPrompt
+          icon="👋"
+          headline="Add your first family member"
+          body="Start by adding yourself or a family member who attends classes."
+          buttonText="Add Family Member"
+          onPress={() => navigation.navigate('AddFamilyMember')}
+        />
+      )}
 
-      <Text style={styles.sectionTitle}>Family Members</Text>
+      {hasFamilyMembers && !hasClasses && (
+        <OnboardingPrompt
+          icon="📅"
+          headline="Add your first class"
+          body="Add a class to start tracking attendance and payments."
+          buttonText="Add Class"
+          onPress={() => navigation.navigate('AddClass')}
+        />
+      )}
+
+      {hasFamilyMembers && (
+        <>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('AddFamilyMember')}
+          >
+            <Text style={styles.addButtonText}>+ Add Family Member</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>Family Members</Text>
+        </>
+      )}
     </>
   );
 
