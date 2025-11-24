@@ -22,7 +22,6 @@ interface RecurStore {
   loading: boolean;
   error: string | null;
   hasFamilyMembers: boolean;
-  hasClasses: boolean;
   fetchClasses: () => Promise<void>;
   fetchAllFamilyMembers: () => Promise<void>;
   fetchAllAttendance: () => Promise<ClassAttendance[]>;
@@ -61,7 +60,6 @@ export const useRecur = create<RecurStore>((set, get) => ({
   loading: false,
   error: null,
   hasFamilyMembers: false,
-  hasClasses: false,
 
   fetchClasses: async () => {
     try {
@@ -156,7 +154,7 @@ export const useRecur = create<RecurStore>((set, get) => ({
       const { data: { user }, error: userError } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        set({ hasFamilyMembers: false, hasClasses: false });
+        set({ hasFamilyMembers: false });
         return;
       }
 
@@ -170,17 +168,7 @@ export const useRecur = create<RecurStore>((set, get) => ({
 
       const hasFamilyMembers = (membersData?.length || 0) > 0;
 
-      const { data: classesData, error: classesError } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1);
-
-      if (classesError) throw classesError;
-
-      const hasClasses = (classesData?.length || 0) > 0;
-
-      set({ hasFamilyMembers, hasClasses });
+      set({ hasFamilyMembers });
     } catch (error) {
       console.error('Error checking onboarding status:', error);
     }

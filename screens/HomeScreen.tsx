@@ -22,7 +22,6 @@ export default function HomeScreen({ navigation }: any) {
     familyMembers,
     memberClassCounts,
     hasFamilyMembers,
-    hasClasses,
     fetchAllFamilyMembers,
     deleteFamilyMember,
     checkOnboardingStatus,
@@ -167,16 +166,6 @@ export default function HomeScreen({ navigation }: any) {
           body="Start by adding yourself or a family member who attends classes."
           buttonText="Add Family Member"
           onPress={() => navigation.navigate('AddFamilyMember')}
-        />
-      )}
-
-      {hasFamilyMembers && !hasClasses && (
-        <OnboardingPrompt
-          icon="📅"
-          headline="Add your first class"
-          body="Add a class to start tracking attendance and payments."
-          buttonText="Add Class"
-          onPress={() => navigation.navigate('AddClass')}
         />
       )}
 
