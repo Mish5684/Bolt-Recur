@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -15,6 +16,12 @@ const HomeIcon = ({ focused }: { focused: boolean }) => (
 const AnalyticsIcon = ({ focused }: { focused: boolean }) => (
   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
     <Text style={{ fontSize: 24 }}>{focused ? '📊' : '📈'}</Text>
+  </View>
+);
+
+const SettingsIcon = ({ focused }: { focused: boolean }) => (
+  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <Text style={{ fontSize: 24 }}>{focused ? '⚙️' : '⚙️'}</Text>
   </View>
 );
 
@@ -53,6 +60,14 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: 'Analytics',
           tabBarIcon: AnalyticsIcon,
+        }}
+      />
+      <Tab.Screen
+        name="SettingsTab"
+        component={SettingsScreen}
+        options={{
+          tabBarLabel: 'Settings',
+          tabBarIcon: SettingsIcon,
         }}
       />
     </Tab.Navigator>
