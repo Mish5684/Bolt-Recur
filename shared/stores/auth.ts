@@ -26,7 +26,6 @@ export const useAuth = create<AuthStore>((set) => ({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: undefined, // Disable magic link
         },
       });
 

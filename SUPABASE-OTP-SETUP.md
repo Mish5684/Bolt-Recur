@@ -3,35 +3,47 @@
 ## Problem
 After creating a new Supabase database, you're receiving magic links instead of OTP codes in your email.
 
+## ⚠️ CRITICAL: This MUST Be Fixed in Supabase Dashboard
+
+**The app code CANNOT control which type of email Supabase sends.** This is controlled entirely by your Supabase project configuration. You MUST update your Supabase dashboard settings - there is no code change that can fix this.
+
 ## Solution
 
-You need to configure Supabase to use OTP (one-time password) authentication. Here are two ways to fix it:
+You need to configure Supabase Authentication settings in the dashboard:
 
 ---
 
-## Method 1: Supabase Dashboard Settings (Recommended)
+## Step-by-Step Fix (Supabase Dashboard)
 
-### Step-by-Step Instructions:
+### 🔧 Configuration Steps:
 
-1. **Go to Supabase Dashboard**
-   - Navigate to https://supabase.com/dashboard
-   - Select your project
+**Step 1: Open Supabase Dashboard**
+- Go to: https://supabase.com/dashboard
+- Select your project from the list
 
-2. **Open Authentication Settings**
-   - Click **Authentication** in the left sidebar
-   - Click **Providers**
+**Step 2: Navigate to Authentication**
+- Click **"Authentication"** in the left sidebar
+- Click **"Providers"** tab at the top
 
-3. **Configure Email Provider**
-   - Find and click on **Email** provider
-   - You'll see several toggle options
+**Step 3: Configure Email Provider**
+- Scroll down to find the **"Email"** provider
+- Click on it to expand the settings panel
 
-4. **Enable OTP**
-   - Toggle **ON**: "Enable Email OTP"
-   - Toggle **OFF**: "Confirm email" (unless you want double opt-in)
-   - Toggle **OFF**: "Enable Email Magic Link" (if you want ONLY OTP)
+**Step 4: Toggle Settings (MOST IMPORTANT)**
 
-5. **Save Changes**
-   - Scroll down and click **Save**
+You'll see these toggle switches - configure them EXACTLY as shown:
+
+✅ **"Enable Email OTP"** → Toggle **ON** (must be enabled)
+❌ **"Enable Email Magic Link"** → Toggle **OFF** (must be disabled)
+❌ **"Confirm email"** → Toggle **OFF** (unless you want double opt-in)
+
+**Step 5: Save**
+- Scroll to the bottom of the settings panel
+- Click the **"Save"** button
+- Wait for the success message
+
+### ⏱️ Changes Take Effect Immediately
+Once saved, the next authentication email will use OTP instead of magic links.
 
 ### Email Templates (Optional)
 
@@ -45,21 +57,14 @@ You can also customize the OTP email template:
 
 ---
 
-## Method 2: Code Update (Already Applied)
+## Why Code Changes Don't Work
 
-The app code has been updated to disable magic links:
+Some developers try to set `emailRedirectTo: undefined` or other options in the code, but **these do not control whether magic links are sent**. The authentication method (OTP vs Magic Link) is controlled by:
 
-```typescript
-const { error } = await supabase.auth.signInWithOtp({
-  email,
-  options: {
-    shouldCreateUser: true,
-    emailRedirectTo: undefined, // Disable magic link
-  },
-});
-```
+1. **Supabase project configuration** (Dashboard settings)
+2. **Email template settings** (Dashboard → Email Templates)
 
-This tells Supabase to send ONLY the OTP code without a magic link.
+The app code only triggers the authentication flow - it doesn't control what Supabase sends.
 
 ---
 
