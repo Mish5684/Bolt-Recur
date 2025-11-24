@@ -438,9 +438,12 @@ export const useRecur = create<RecurStore>((set, get) => ({
   addAttendance: async (attendance) => {
     try {
       set({ loading: true, error: null });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('class_attendance')
-        .insert([attendance]);
+        .insert([{ ...attendance, user_id: user.id }]);
 
       if (error) throw error;
 
@@ -457,9 +460,12 @@ export const useRecur = create<RecurStore>((set, get) => ({
   addPayment: async (payment) => {
     try {
       set({ loading: true, error: null });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('payments')
-        .insert([payment]);
+        .insert([{ ...payment, user_id: user.id }]);
 
       if (error) throw error;
 
@@ -476,9 +482,12 @@ export const useRecur = create<RecurStore>((set, get) => ({
   recordPayment: async (payment) => {
     try {
       set({ loading: true, error: null });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('payments')
-        .insert([payment]);
+        .insert([{ ...payment, user_id: user.id }]);
 
       if (error) throw error;
 
@@ -537,9 +546,12 @@ export const useRecur = create<RecurStore>((set, get) => ({
   subscribeToClass: async (memberId: string, classId: string) => {
     try {
       set({ loading: true, error: null });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('class_subscriptions')
-        .insert([{ family_member_id: memberId, class_id: classId }]);
+        .insert([{ family_member_id: memberId, class_id: classId, user_id: user.id }]);
 
       if (error) throw error;
       await get().fetchMemberClassCounts();
