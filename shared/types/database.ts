@@ -52,6 +52,7 @@ export interface Payment {
   currency: string;
   payment_date: string;
   created_at: string;
+  user_id: string;
 }
 
 export interface ClassAttendance {
@@ -60,6 +61,7 @@ export interface ClassAttendance {
   class_id: string;
   class_date: string;
   created_at: string;
+  user_id: string;
 }
 
 export interface ClassSubscription {
@@ -67,6 +69,7 @@ export interface ClassSubscription {
   family_member_id: string;
   class_id: string;
   created_at: string;
+  user_id: string;
 }
 
 export interface ClassWithDetails extends Class {}
