@@ -66,9 +66,21 @@ export const useRecur = create<RecurStore>((set, get) => ({
   fetchClasses: async () => {
     try {
       set({ loading: true, error: null });
+
+      // Get current user to ensure we have an active session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('No authenticated user found:', userError);
+        set({ classes: [] });
+        return;
+      }
+
+      // Fetch classes with explicit user_id filter (defense in depth)
       const { data, error } = await supabase
         .from('classes')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
@@ -84,9 +96,21 @@ export const useRecur = create<RecurStore>((set, get) => ({
   fetchAllFamilyMembers: async () => {
     try {
       set({ loading: true, error: null });
+
+      // Get current user to ensure we have an active session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('No authenticated user found:', userError);
+        set({ familyMembers: [], hasFamilyMembers: false });
+        return;
+      }
+
+      // Fetch family members with explicit user_id filter (defense in depth)
       const { data, error } = await supabase
         .from('family_members')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
@@ -128,9 +152,18 @@ export const useRecur = create<RecurStore>((set, get) => ({
 
   checkOnboardingStatus: async () => {
     try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        set({ hasFamilyMembers: false, hasClasses: false });
+        return;
+      }
+
       const { data: membersData, error: membersError } = await supabase
         .from('family_members')
         .select('id')
+        .eq('user_id', user.id)
         .limit(1);
 
       if (membersError) throw membersError;
@@ -140,6 +173,7 @@ export const useRecur = create<RecurStore>((set, get) => ({
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('id')
+        .eq('user_id', user.id)
         .limit(1);
 
       if (classesError) throw classesError;
