@@ -145,20 +145,44 @@ export function getMarkAttendanceButtonState(
       };
     }
 
-    // PRIORITY 3: All caught up
+    // PRIORITY 3: All caught up (only show if user has attended at least one class)
+    if (attendanceRecords.length > 0) {
+      const nextClass = getNextScheduledClass(schedule);
+      return {
+        state: 'caught_up',
+        label: 'ALL CAUGHT UP',
+        date: today,
+        subtitle: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : undefined,
+        time: nextClass?.time,
+        disabled: true,
+        color: 'success',
+      };
+    }
+
+    // PRIORITY 4: Schedule exists but no attendance yet - show next class as action
     const nextClass = getNextScheduledClass(schedule);
+    if (nextClass) {
+      return {
+        state: 'mark_today',
+        label: 'MARK ATTENDANCE',
+        date: today,
+        subtitle: `Next class: ${format(nextClass.date, 'EEE, MMM d')} · ${nextClass.time}`,
+        disabled: false,
+        color: 'primary',
+      };
+    }
+
+    // Fallback: No next class found, just show mark today
     return {
-      state: 'caught_up',
-      label: 'ALL CAUGHT UP',
+      state: 'mark_today',
+      label: 'MARK ATTENDANCE',
       date: today,
-      subtitle: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : undefined,
-      time: nextClass?.time,
-      disabled: true,
-      color: 'success',
+      disabled: false,
+      color: 'primary',
     };
   }
 
-  // PRIORITY 4: No schedule - simple mode
+  // PRIORITY 5: No schedule - simple mode
   if (isAlreadyMarked(today, attendanceRecords)) {
     return {
       state: 'marked_today',

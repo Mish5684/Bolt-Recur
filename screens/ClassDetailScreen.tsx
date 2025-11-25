@@ -110,11 +110,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
 
   const buttonConfig = getMarkAttendanceButtonState(classData?.schedule, attendance);
 
-  const currentYearPayments = payments.filter(payment => {
-    const paymentDate = parseISO(payment.payment_date);
-    return paymentDate.getFullYear() === new Date().getFullYear();
-  });
-
   const handleEditPayment = (payment: Payment) => {
     navigation.navigate('RecordPayment', {
       memberId,
@@ -219,7 +214,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     { type: 'header' },
     { type: 'attendanceCalendar' },
     { type: 'paymentHeader' },
-    ...currentYearPayments.map(item => ({ type: 'payment', data: item })),
+    ...payments.map(item => ({ type: 'payment', data: item })),
     { type: 'deleteButton' },
   ];
 
@@ -385,9 +380,9 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     if (item.type === 'paymentHeader') {
       return (
         <>
-          <Text style={styles.sectionTitle}>Payment History (2024)</Text>
-          {currentYearPayments.length === 0 && (
-            <Text style={styles.emptyText}>No payment records this year</Text>
+          <Text style={styles.sectionTitle}>Payment History</Text>
+          {payments.length === 0 && (
+            <Text style={styles.emptyText}>No payment records yet</Text>
           )}
         </>
       );
