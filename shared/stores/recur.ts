@@ -38,10 +38,10 @@ interface RecurStore {
   addFamilyMember: (member: { name: string; avatar: string; relation: string }) => Promise<string | null>;
   updateFamilyMember: (memberId: string, member: { name: string; avatar: string; relation: string }) => Promise<boolean>;
   deleteFamilyMember: (memberId: string) => Promise<boolean>;
-  addAttendance: (attendance: Omit<ClassAttendance, 'id' | 'created_at'>) => Promise<void>;
+  addAttendance: (attendance: Omit<ClassAttendance, 'id' | 'created_at' | 'user_id'>) => Promise<void>;
   deleteAttendance: (attendanceId: string) => Promise<boolean>;
-  addPayment: (payment: Omit<Payment, 'id' | 'created_at'>) => Promise<void>;
-  recordPayment: (payment: Omit<Payment, 'id' | 'created_at'>) => Promise<boolean>;
+  addPayment: (payment: Omit<Payment, 'id' | 'created_at' | 'user_id'>) => Promise<void>;
+  recordPayment: (payment: Omit<Payment, 'id' | 'created_at' | 'user_id'>) => Promise<boolean>;
   updatePayment: (paymentId: string, payment: Partial<Omit<Payment, 'id' | 'created_at'>>) => Promise<boolean>;
   deletePayment: (paymentId: string) => Promise<boolean>;
   subscribeToClass: (memberId: string, classId: string) => Promise<void>;
@@ -327,19 +327,19 @@ export const useRecur = create<RecurStore>((set, get) => ({
       if (classesError) throw classesError;
 
       const classMap: { [classId: string]: { name: string } } = {};
-      classesData?.forEach(cls => {
+      classesData?.forEach((cls: { id: string; name: string }) => {
         classMap[cls.id] = { name: cls.name };
       });
 
       const attendanceCount: { [classId: string]: number } = {};
-      attendanceData?.forEach(att => {
+      attendanceData?.forEach((att: { class_id: string }) => {
         attendanceCount[att.class_id] = (attendanceCount[att.class_id] || 0) + 1;
       });
 
       const costPerClassMap: { [classId: string]: CostPerClass } = {};
       const paymentsByClass: { [classId: string]: { totalAmount: number; totalClasses: number; currency: string } } = {};
 
-      paymentsData?.forEach(payment => {
+      paymentsData?.forEach((payment: { class_id: string; amount: number; classes_paid: number; currency: string }) => {
         if (!paymentsByClass[payment.class_id]) {
           paymentsByClass[payment.class_id] = {
             totalAmount: 0,

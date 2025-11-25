@@ -1,97 +1,149 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Dimensions,
   Alert,
 } from 'react-native';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isFuture, isSameDay, parseISO } from 'date-fns';
-import { ClassAttendance } from '../shared/types/database';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  isSameDay,
+  parseISO,
+  isFuture,
+  subMonths,
+} from 'date-fns';
+import { ClassAttendance, ScheduleItem } from '../shared/types/database';
+import { isScheduledDay } from '../shared/utils/attendanceUtils';
 
 interface AttendanceCalendarProps {
   attendance: ClassAttendance[];
+  schedule?: ScheduleItem[];
   onDeleteAttendance: (attendanceId: string) => void;
+  onAddAttendance: (date: Date) => void;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const CALENDAR_WIDTH = SCREEN_WIDTH - 32;
-const PEEK_WIDTH = 40;
-
-export default function AttendanceCalendar({ attendance, onDeleteAttendance }: AttendanceCalendarProps) {
-  const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
+export default function AttendanceCalendar({
+  attendance,
+  schedule,
+  onDeleteAttendance,
+  onAddAttendance,
+}: AttendanceCalendarProps) {
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const today = new Date();
-  const minMonthOffset = -2;
-  const maxMonthOffset = 0;
+  const currentMonth = subMonths(today, selectedMonthOffset);
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const getMonthDates = (monthOffset: number) => {
-    const targetDate = addMonths(today, monthOffset);
-    const start = startOfMonth(targetDate);
-    const end = endOfMonth(targetDate);
-    return {
-      monthDate: targetDate,
-      days: eachDayOfInterval({ start, end }),
-    };
-  };
+  const firstDayOfWeek = getDay(monthStart);
+  const paddingDays = Array(firstDayOfWeek).fill(null);
 
-  const getAttendanceForDate = (date: Date) => {
+  const getAttendanceForDate = (date: Date): ClassAttendance | undefined => {
     return attendance.find((record) => {
       const recordDate = parseISO(record.class_date);
       return isSameDay(recordDate, date);
     });
   };
 
-  const handleDatePress = (date: Date, attendanceRecord?: ClassAttendance) => {
-    if (isFuture(date)) return;
+  const handleDatePress = (date: Date) => {
+    const futureDate = isFuture(date);
+    if (futureDate) return;
+
+    const attendanceRecord = getAttendanceForDate(date);
 
     if (attendanceRecord) {
       Alert.alert(
-        'Delete Attendance',
-        'Do you want to delete this attendance record?',
+        'Remove Attendance',
+        `Remove attendance for ${format(date, 'MMM d, yyyy')}?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Delete',
+            text: 'Remove',
             style: 'destructive',
             onPress: () => onDeleteAttendance(attendanceRecord.id),
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Mark Attendance',
+        `Mark attendance for ${format(date, 'MMM d, yyyy')}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Mark',
+            onPress: () => onAddAttendance(date),
           },
         ]
       );
     }
   };
 
-  const handleSwipe = (direction: 'left' | 'right') => {
-    let newOffset = currentMonthOffset;
+  const monthOptions = [0, 1, 2, 3, 4, 5].map((offset) => {
+    const date = subMonths(today, offset);
+    return {
+      offset,
+      label: format(date, 'MMMM yyyy'),
+      date,
+    };
+  });
 
-    if (direction === 'left' && currentMonthOffset > minMonthOffset) {
-      newOffset = currentMonthOffset - 1;
-    } else if (direction === 'right' && currentMonthOffset < maxMonthOffset) {
-      newOffset = currentMonthOffset + 1;
-    }
-
-    if (newOffset !== currentMonthOffset) {
-      setCurrentMonthOffset(newOffset);
-      const scrollToX = (maxMonthOffset - newOffset) * (CALENDAR_WIDTH + 16);
-      scrollViewRef.current?.scrollTo({ x: scrollToX, animated: true });
-    }
-  };
-
-  const renderCalendar = (monthOffset: number) => {
-    const { monthDate, days } = getMonthDates(monthOffset);
-    const firstDayOfWeek = getDay(days[0]);
-    const paddingDays = Array(firstDayOfWeek).fill(null);
-    const allDays = [...paddingDays, ...days];
+  const renderMonthPicker = () => {
+    if (!showMonthPicker) return null;
 
     return (
-      <View key={monthOffset} style={styles.calendarContainer}>
-        <Text style={styles.monthHeader}>
-          {format(monthDate, 'MMMM yyyy')}
-        </Text>
+      <View style={styles.monthPickerOverlay}>
+        <TouchableOpacity
+          style={styles.monthPickerBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowMonthPicker(false)}
+        />
+        <View style={styles.monthPickerContainer}>
+          {monthOptions.map((option) => (
+            <TouchableOpacity
+              key={option.offset}
+              style={[
+                styles.monthPickerItem,
+                option.offset === selectedMonthOffset && styles.monthPickerItemSelected,
+              ]}
+              onPress={() => {
+                setSelectedMonthOffset(option.offset);
+                setShowMonthPicker(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.monthPickerItemText,
+                  option.offset === selectedMonthOffset && styles.monthPickerItemTextSelected,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.monthSelector}
+        onPress={() => setShowMonthPicker(true)}
+      >
+        <Text style={styles.monthSelectorText}>{format(currentMonth, 'MMMM yyyy')}</Text>
+        <Text style={styles.monthSelectorArrow}>▼</Text>
+      </TouchableOpacity>
+
+      <View style={styles.calendarContainer}>
         <View style={styles.weekDaysContainer}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <View key={index} style={styles.weekDayCell}>
@@ -101,73 +153,63 @@ export default function AttendanceCalendar({ attendance, onDeleteAttendance }: A
         </View>
 
         <View style={styles.daysGrid}>
-          {allDays.map((day, index) => {
-            if (!day) {
-              return <View key={`empty-${index}`} style={styles.dayCell} />;
-            }
+          {paddingDays.map((_, index) => (
+            <View key={`empty-${index}`} style={styles.dayCell} />
+          ))}
 
+          {daysInMonth.map((day, index) => {
             const attendanceRecord = getAttendanceForDate(day);
             const hasAttendance = !!attendanceRecord;
-            const isFutureDate = isFuture(day);
+            const scheduled = isScheduledDay(day, schedule);
+            const futureDate = isFuture(day);
+            const isToday = isSameDay(day, today);
 
             return (
               <TouchableOpacity
                 key={index}
                 style={styles.dayCell}
-                onPress={() => handleDatePress(day, attendanceRecord)}
-                disabled={isFutureDate && !hasAttendance}
+                onPress={() => handleDatePress(day)}
+                disabled={futureDate}
               >
                 <View style={styles.dayCellContent}>
                   <Text
                     style={[
                       styles.dayText,
-                      isFutureDate && styles.futureDayText,
+                      futureDate && styles.futureDayText,
+                      isToday && styles.todayText,
                     ]}
                   >
                     {format(day, 'd')}
                   </Text>
-                  {hasAttendance && (
-                    <View style={styles.attendanceDot} />
-                  )}
+
+                  {hasAttendance ? (
+                    <View style={styles.attendedDot} />
+                  ) : scheduled && !futureDate ? (
+                    <View style={styles.scheduledCircle} />
+                  ) : scheduled && futureDate ? (
+                    <View style={styles.scheduledCircleFuture} />
+                  ) : null}
                 </View>
               </TouchableOpacity>
             );
           })}
         </View>
       </View>
-    );
-  };
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        pagingEnabled={false}
-        showsHorizontalScrollIndicator={false}
-        scrollEnabled={true}
-        contentContainerStyle={styles.scrollContent}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={(event) => {
-          const offsetX = event.nativeEvent.contentOffset.x;
-          const page = Math.round(offsetX / (CALENDAR_WIDTH + 16));
-          const newMonthOffset = maxMonthOffset - page;
-
-          if (newMonthOffset >= minMonthOffset && newMonthOffset <= maxMonthOffset) {
-            setCurrentMonthOffset(newMonthOffset);
-          }
-        }}
-        decelerationRate="fast"
-        snapToInterval={CALENDAR_WIDTH + 16}
-        snapToAlignment="start"
-        contentOffset={{ x: (maxMonthOffset - currentMonthOffset) * (CALENDAR_WIDTH + 16), y: 0 }}
-      >
-        {[minMonthOffset, minMonthOffset + 1, maxMonthOffset].map((offset) => renderCalendar(offset))}
-      </ScrollView>
-
-      <View style={styles.swipeHint}>
-        <Text style={styles.swipeHintText}>← Swipe to view previous months →</Text>
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={styles.attendedDot} />
+          <Text style={styles.legendText}>Attended</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={styles.scheduledCircle} />
+          <Text style={styles.legendText}>Scheduled</Text>
+        </View>
       </View>
+
+      <Text style={styles.hint}>Tap any past date to mark/unmark</Text>
+
+      {renderMonthPicker()}
     </View>
   );
 }
@@ -176,24 +218,34 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
   },
-  scrollContent: {
+  monthSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    gap: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  monthSelectorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginRight: 8,
+  },
+  monthSelectorArrow: {
+    fontSize: 12,
+    color: '#6B7280',
   },
   calendarContainer: {
-    width: CALENDAR_WIDTH,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  monthHeader: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 16,
-    textAlign: 'center',
   },
   weekDaysContainer: {
     flexDirection: 'row',
@@ -232,10 +284,14 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontWeight: '500',
   },
+  todayText: {
+    color: '#2563EB',
+    fontWeight: '700',
+  },
   futureDayText: {
     color: '#D1D5DB',
   },
-  attendanceDot: {
+  attendedDot: {
     position: 'absolute',
     bottom: 4,
     width: 6,
@@ -243,13 +299,95 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#10B981',
   },
-  swipeHint: {
-    marginTop: 12,
-    alignItems: 'center',
+  scheduledCircle: {
+    position: 'absolute',
+    bottom: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    backgroundColor: 'transparent',
   },
-  swipeHintText: {
+  scheduledCircleFuture: {
+    position: 'absolute',
+    bottom: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: 'transparent',
+  },
+  legend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 24,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  hint: {
     fontSize: 12,
     color: '#9CA3AF',
     fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  monthPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  monthPickerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  monthPickerContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    right: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  monthPickerItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  monthPickerItemSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  monthPickerItemText: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  monthPickerItemTextSelected: {
+    color: '#2563EB',
+    fontWeight: '700',
   },
 });

@@ -15,9 +15,10 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRecur } from '../shared/stores/recur';
 import { ClassAttendance, Payment } from '../shared/types/database';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import AttendanceCalendar from '../components/AttendanceCalendar';
 import LocationDisplay from '../components/LocationDisplay';
+import { getMarkAttendanceButtonState, calculateClassMetrics } from '../shared/utils/attendanceUtils';
 
 export default function ClassDetailScreen({ route, navigation }: any) {
   const { memberId, classId } = route.params;
@@ -34,8 +35,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
   } = useRecur();
   const [attendance, setAttendance] = useState<ClassAttendance[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const classData = classes.find((c) => c.id === classId);
 
@@ -55,25 +54,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     loadData();
   };
 
-  const handleMarkAttendance = () => {
-    setShowDatePicker(true);
-  };
-
-  const handleDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-
-    if (date) {
-      setSelectedDate(date);
-      if (Platform.OS === 'android') {
-        confirmAttendance(date);
-      }
-    }
-  };
-
-  const confirmAttendance = async (date: Date) => {
-    setShowDatePicker(false);
+  const handleMarkAttendance = async (date: Date) => {
     await addAttendance({
       family_member_id: memberId,
       class_id: classId,
@@ -124,12 +105,15 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     return classData.schedule.map(s => `${s.day} ${s.time}`).join(', ');
   };
 
-  const totalPaid = payments.reduce((sum, p) => sum + p.classes_paid, 0);
-  const totalSpent = payments.reduce((sum, p) => sum + p.amount, 0);
-  const attended = attendance.length;
-  const remaining = totalPaid - attended;
-
+  const metrics = calculateClassMetrics(attendance, payments);
   const primaryCurrency = payments.length > 0 ? payments[0].currency : 'USD';
+
+  const buttonConfig = getMarkAttendanceButtonState(classData?.schedule, attendance);
+
+  const currentYearPayments = payments.filter(payment => {
+    const paymentDate = parseISO(payment.payment_date);
+    return paymentDate.getFullYear() === new Date().getFullYear();
+  });
 
   const handleEditPayment = (payment: Payment) => {
     navigation.navigate('RecordPayment', {
@@ -235,7 +219,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     { type: 'header' },
     { type: 'attendanceCalendar' },
     { type: 'paymentHeader' },
-    ...payments.map(item => ({ type: 'payment', data: item })),
+    ...currentYearPayments.map(item => ({ type: 'payment', data: item })),
     { type: 'deleteButton' },
   ];
 
@@ -289,80 +273,81 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             />
           )}
 
-          <View style={styles.actionButtons}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.ctaButton,
-                pressed && styles.ctaButtonPressed,
-              ]}
-              onPress={handleMarkAttendance}
-            >
-              <Text style={styles.ctaButtonText}>✓ Mark Attendance</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.ctaButton,
-                pressed && styles.ctaButtonPressed,
-              ]}
-              onPress={handleRecordPayment}
-            >
-              <Text style={styles.ctaButtonText}>$ Record Payment</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.smartAttendanceButton,
+              buttonConfig.color === 'primary' && styles.smartAttendanceButtonPrimary,
+              buttonConfig.color === 'warning' && styles.smartAttendanceButtonWarning,
+              buttonConfig.color === 'success' && styles.smartAttendanceButtonSuccess,
+              buttonConfig.disabled && styles.smartAttendanceButtonDisabled,
+              pressed && !buttonConfig.disabled && styles.smartAttendanceButtonPressed,
+            ]}
+            onPress={() => !buttonConfig.disabled && handleMarkAttendance(buttonConfig.date)}
+            disabled={buttonConfig.disabled}
+          >
+            <Text style={[
+              styles.smartAttendanceButtonLabel,
+              buttonConfig.disabled && styles.smartAttendanceButtonLabelDisabled
+            ]}>
+              {buttonConfig.state === 'mark_today' && '✓ '}
+              {buttonConfig.state === 'mark_missed' && '📌 '}
+              {buttonConfig.state === 'marked_today' && '✓ '}
+              {buttonConfig.state === 'caught_up' && '✓ '}
+              {buttonConfig.label}
+            </Text>
+            <Text style={[
+              styles.smartAttendanceButtonSubtext,
+              buttonConfig.disabled && styles.smartAttendanceButtonLabelDisabled
+            ]}>
+              {buttonConfig.subtitle || `${format(buttonConfig.date, 'EEE, MMM d, yyyy')}${buttonConfig.time ? ` · ${buttonConfig.time}` : ''}`}
+            </Text>
+          </Pressable>
 
           <View style={styles.infoTilesContainer}>
             <View style={styles.infoTilesRow}>
               <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>Total Attended</Text>
+                <Text style={styles.infoTileLabel}>This Year</Text>
                 <Text
                   style={styles.infoTileValue}
                   adjustsFontSizeToFit
                   numberOfLines={1}
                   minimumFontScale={0.6}
                 >
-                  {attended}
+                  {metrics.attendedThisYear}
                 </Text>
               </View>
               <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>Attended This Month</Text>
+                <Text style={styles.infoTileLabel}>This Month</Text>
                 <Text
                   style={styles.infoTileValue}
                   adjustsFontSizeToFit
                   numberOfLines={1}
                   minimumFontScale={0.6}
                 >
-                  {attendance.filter(a => {
-                    const date = new Date(a.class_date);
-                    const now = new Date();
-                    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-                  }).length}
+                  {metrics.attendedThisMonth}
+                </Text>
+              </View>
+              <View style={styles.infoTile}>
+                <Text style={styles.infoTileLabel}>Remaining</Text>
+                <Text
+                  style={[styles.infoTileValue, metrics.remaining <= 0 && styles.warningText]}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                  minimumFontScale={0.6}
+                >
+                  {metrics.remaining}
                 </Text>
               </View>
             </View>
-            <View style={styles.infoTilesRow}>
-              <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>Prepaid Classes Remaining</Text>
-                <Text
-                  style={[styles.infoTileValue, remaining <= 0 && styles.warningText]}
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                  minimumFontScale={0.6}
-                >
-                  {remaining}
-                </Text>
-              </View>
-              <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>Total Spent</Text>
-                <Text
-                  style={styles.infoTileValue}
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                  minimumFontScale={0.5}
-                >
-                  {primaryCurrency} {totalSpent.toFixed(2)}
-                </Text>
-              </View>
-            </View>
+          </View>
+
+          <View style={styles.financialSummary}>
+            <Text style={styles.financialSummaryText}>
+              Spent this year: {primaryCurrency} {metrics.spentThisYear.toFixed(2)}
+            </Text>
+            <Text style={styles.financialSummaryText}>
+              Cost per class: {primaryCurrency} {metrics.costPerClass.toFixed(2)}
+            </Text>
           </View>
 
           <Text style={styles.sectionTitle}>Attendance</Text>
@@ -378,9 +363,21 @@ export default function ClassDetailScreen({ route, navigation }: any) {
           ) : (
             <AttendanceCalendar
               attendance={attendance}
+              schedule={classData?.schedule}
               onDeleteAttendance={handleDeleteAttendance}
+              onAddAttendance={handleMarkAttendance}
             />
           )}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.recordPaymentButton,
+              pressed && styles.recordPaymentButtonPressed,
+            ]}
+            onPress={handleRecordPayment}
+          >
+            <Text style={styles.recordPaymentButtonText}>💰 RECORD PAYMENT</Text>
+          </Pressable>
         </>
       );
     }
@@ -388,9 +385,9 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     if (item.type === 'paymentHeader') {
       return (
         <>
-          <Text style={styles.sectionTitle}>Payment History</Text>
-          {payments.length === 0 && (
-            <Text style={styles.emptyText}>No payment records yet</Text>
+          <Text style={styles.sectionTitle}>Payment History (2024)</Text>
+          {currentYearPayments.length === 0 && (
+            <Text style={styles.emptyText}>No payment records this year</Text>
           )}
         </>
       );
@@ -433,43 +430,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
         nestedScrollEnabled={true}
       />
 
-      {showDatePicker && (
-        <Modal
-          visible={showDatePicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Attendance Date</Text>
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
-                maximumDate={new Date()}
-              />
-              {Platform.OS === 'ios' && (
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker(false)}
-                    style={styles.modalCancelButton}
-                  >
-                    <Text style={styles.modalCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => confirmAttendance(selectedDate)}
-                    style={styles.modalConfirmButton}
-                  >
-                    <Text style={styles.modalConfirmText}>Confirm</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
-        </Modal>
-      )}
     </SafeAreaView>
   );
 }
@@ -569,12 +529,11 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   infoTilesContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   infoTilesRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 12,
   },
   infoTile: {
     flex: 1,
@@ -586,50 +545,94 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   infoTileLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#6B7280',
     marginBottom: 6,
     textAlign: 'center',
   },
   infoTileValue: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '700',
     color: '#1F2937',
     textAlign: 'center',
   },
+  financialSummary: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  financialSummaryText: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
   warningText: {
     color: '#EF4444',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
+  smartAttendanceButton: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
     marginBottom: 16,
     marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  ctaButton: {
-    flex: 1,
+  smartAttendanceButtonPrimary: {
     backgroundColor: '#2563EB',
+  },
+  smartAttendanceButtonWarning: {
+    backgroundColor: '#F59E0B',
+  },
+  smartAttendanceButtonSuccess: {
+    backgroundColor: '#10B981',
+  },
+  smartAttendanceButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  smartAttendanceButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  smartAttendanceButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  smartAttendanceButtonLabelDisabled: {
+    color: '#6B7280',
+  },
+  smartAttendanceButtonSubtext: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '400',
+    opacity: 0.9,
+  },
+  recordPaymentButton: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#2563EB',
   },
-  ctaButtonPressed: {
-    backgroundColor: '#1E40AF',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
-    elevation: 1,
-    transform: [{ scale: 0.98 }],
+  recordPaymentButtonPressed: {
+    backgroundColor: '#F3F4F6',
   },
-  ctaButtonText: {
-    color: '#FFFFFF',
+  recordPaymentButtonText: {
+    color: '#2563EB',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 16,
