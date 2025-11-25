@@ -37,6 +37,10 @@ export default function AttendanceCalendar({
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const today = new Date();
+
+  // Debug logging for schedule data
+  console.log('📅 Calendar Schedule:', JSON.stringify(schedule, null, 2));
+
   const currentMonth = subMonths(today, selectedMonthOffset);
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -163,6 +167,11 @@ export default function AttendanceCalendar({
             const scheduled = isScheduledDay(day, schedule);
             const futureDate = isFuture(day);
             const isToday = isSameDay(day, today);
+
+            // Debug logging for first few days
+            if (index < 3) {
+              console.log(`Day ${format(day, 'EEE MMM d')}: scheduled=${!!scheduled}, hasAttendance=${hasAttendance}`);
+            }
 
             return (
               <TouchableOpacity
@@ -329,7 +338,7 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   legendText: {
     fontSize: 12,

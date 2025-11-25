@@ -19,10 +19,19 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
  * Check if a given date matches the schedule
  */
 export function isScheduledDay(date: Date, schedule?: ScheduleItem[]): ScheduleItem | null {
-  if (!schedule || schedule.length === 0) return null;
+  if (!schedule || schedule.length === 0) {
+    console.log('⚠️ isScheduledDay: No schedule provided');
+    return null;
+  }
 
   const dayName = DAY_NAMES[getDay(date)];
   const matchingSchedule = schedule.find(s => s.day === dayName);
+
+  // Log first call for debugging
+  if (getDay(date) === 1) { // Monday
+    console.log(`🔍 Checking ${dayName} against schedule:`, schedule.map(s => s.day).join(', '));
+    console.log(`🔍 Match found:`, !!matchingSchedule);
+  }
 
   return matchingSchedule || null;
 }
@@ -117,6 +126,11 @@ export function getMarkAttendanceButtonState(
 ): AttendanceButtonConfig {
   const today = new Date();
 
+  // Debug logging
+  console.log('🔴 Button Logic - Schedule:', JSON.stringify(schedule));
+  console.log('🔴 Button Logic - Attendance count:', attendanceRecords.length);
+  console.log('🔴 Button Logic - Class start date:', classStartDate);
+
   // PRIORITY 1: Check if today is scheduled
   if (schedule && schedule.length > 0) {
     const todayScheduleItem = isScheduledDay(today, schedule);
@@ -145,6 +159,8 @@ export function getMarkAttendanceButtonState(
 
     // PRIORITY 2: Check for unmarked scheduled classes since class start date
     const missedClass = findMostRecentUnmarkedClass(schedule, attendanceRecords, classStartDate);
+    console.log('🔴 Missed class found:', missedClass ? format(missedClass.date, 'MMM d, yyyy') : 'None');
+
     if (missedClass) {
       return {
         state: 'mark_missed',
@@ -156,40 +172,16 @@ export function getMarkAttendanceButtonState(
       };
     }
 
-    // PRIORITY 3: All caught up (only show if user has attended at least one class)
-    if (attendanceRecords.length > 0) {
-      const nextClass = getNextScheduledClass(schedule);
-      return {
-        state: 'caught_up',
-        label: 'ALL CAUGHT UP',
-        date: today,
-        subtitle: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : undefined,
-        time: nextClass?.time,
-        disabled: true,
-        color: 'success',
-      };
-    }
-
-    // PRIORITY 4: Schedule exists but no attendance yet - show next class as action
+    // PRIORITY 3: All caught up - show next class info
     const nextClass = getNextScheduledClass(schedule);
-    if (nextClass) {
-      return {
-        state: 'mark_today',
-        label: 'MARK ATTENDANCE',
-        date: today,
-        subtitle: `Next class: ${format(nextClass.date, 'EEE, MMM d')} · ${nextClass.time}`,
-        disabled: false,
-        color: 'primary',
-      };
-    }
-
-    // Fallback: No next class found, just show mark today
     return {
-      state: 'mark_today',
-      label: 'MARK ATTENDANCE',
+      state: 'caught_up',
+      label: 'ALL CAUGHT UP',
       date: today,
-      disabled: false,
-      color: 'primary',
+      subtitle: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : undefined,
+      time: nextClass?.time,
+      disabled: true,
+      color: 'success',
     };
   }
 
@@ -278,10 +270,12 @@ export function calculateClassMetrics(
   });
 
   const spentThisYear = paymentsThisYear.reduce((sum, p) => sum + p.amount, 0);
+  const classesPaidThisYear = paymentsThisYear.reduce((sum, p) => sum + p.classes_paid, 0);
 
-  // Calculate cost per class (based on this year's data)
-  const costPerClass = attendanceThisYear.length > 0
-    ? spentThisYear / attendanceThisYear.length
+  // Calculate cost per class based on payment plan (amount paid / classes paid for)
+  // This shows what you're paying per class according to your payment structure
+  const costPerClass = classesPaidThisYear > 0
+    ? spentThisYear / classesPaidThisYear
     : 0;
 
   return {
