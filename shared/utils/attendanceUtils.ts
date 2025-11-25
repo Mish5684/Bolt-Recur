@@ -46,19 +46,29 @@ export function getScheduledTime(date: Date, schedule?: ScheduleItem[]): string 
 }
 
 /**
- * Find the most recent unmarked scheduled class within the last N days
+ * Find the most recent unmarked scheduled class
+ * Looks back from today to the class start date (or last 90 days max)
  */
 export function findMostRecentUnmarkedClass(
   schedule: ScheduleItem[],
   attendanceRecords: ClassAttendance[],
-  daysBack: number = 7
+  classStartDate?: Date
 ): { date: Date; time: string } | null {
   const today = new Date();
   const unmarkedClasses: { date: Date; time: string }[] = [];
 
-  // Check each day going back
-  for (let i = 1; i <= daysBack; i++) {
+  // Determine how far back to look
+  // If we have a class start date, use that; otherwise look back 90 days max
+  const startDate = classStartDate || subDays(today, 90);
+  const daysToCheck = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // Check each day going back from yesterday to the start date
+  for (let i = 1; i <= daysToCheck; i++) {
     const checkDate = subDays(today, i);
+
+    // Stop if we've gone before the start date
+    if (checkDate < startDate) break;
+
     const scheduleItem = isScheduledDay(checkDate, schedule);
 
     if (scheduleItem && !isAlreadyMarked(checkDate, attendanceRecords)) {
@@ -102,7 +112,8 @@ export function getNextScheduledClass(schedule?: ScheduleItem[]): { date: Date; 
  */
 export function getMarkAttendanceButtonState(
   schedule: ScheduleItem[] | undefined,
-  attendanceRecords: ClassAttendance[]
+  attendanceRecords: ClassAttendance[],
+  classStartDate?: Date
 ): AttendanceButtonConfig {
   const today = new Date();
 
@@ -132,8 +143,8 @@ export function getMarkAttendanceButtonState(
       }
     }
 
-    // PRIORITY 2: Check for unmarked scheduled classes in last 7 days
-    const missedClass = findMostRecentUnmarkedClass(schedule, attendanceRecords, 7);
+    // PRIORITY 2: Check for unmarked scheduled classes since class start date
+    const missedClass = findMostRecentUnmarkedClass(schedule, attendanceRecords, classStartDate);
     if (missedClass) {
       return {
         state: 'mark_missed',

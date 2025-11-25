@@ -108,7 +108,9 @@ export default function ClassDetailScreen({ route, navigation }: any) {
   const metrics = calculateClassMetrics(attendance, payments);
   const primaryCurrency = payments.length > 0 ? payments[0].currency : 'USD';
 
-  const buttonConfig = getMarkAttendanceButtonState(classData?.schedule, attendance);
+  // Pass class start date for proper missed class detection
+  const classStartDate = classData?.created_at ? new Date(classData.created_at) : undefined;
+  const buttonConfig = getMarkAttendanceButtonState(classData?.schedule, attendance, classStartDate);
 
   const handleEditPayment = (payment: Payment) => {
     navigation.navigate('RecordPayment', {
@@ -353,16 +355,12 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     if (item.type === 'attendanceCalendar') {
       return (
         <>
-          {attendance.length === 0 ? (
-            <Text style={styles.emptyText}>No attendance records yet</Text>
-          ) : (
-            <AttendanceCalendar
-              attendance={attendance}
-              schedule={classData?.schedule}
-              onDeleteAttendance={handleDeleteAttendance}
-              onAddAttendance={handleMarkAttendance}
-            />
-          )}
+          <AttendanceCalendar
+            attendance={attendance}
+            schedule={classData?.schedule}
+            onDeleteAttendance={handleDeleteAttendance}
+            onAddAttendance={handleMarkAttendance}
+          />
 
           <Pressable
             style={({ pressed }) => [
