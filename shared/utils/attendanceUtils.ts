@@ -1,16 +1,12 @@
 import { format, parseISO, isSameDay, getDay, subDays, addDays, isFuture, isPast } from 'date-fns';
 import { ScheduleItem, ClassAttendance } from '../types/database';
 
-export type ButtonState = 'mark_today' | 'marked_today' | 'mark_missed' | 'caught_up';
-
 export interface AttendanceButtonConfig {
-  state: ButtonState;
   label: string;
-  date: Date;
-  time?: string;
-  subtitle?: string;
+  subtitle: string;
   disabled: boolean;
-  color: 'primary' | 'success' | 'warning';
+  color: 'primary' | 'success' | 'neutral';
+  action?: () => void;
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -18,22 +14,15 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 /**
  * Check if a given date matches the schedule
  */
-export function isScheduledDay(date: Date, schedule?: ScheduleItem[]): ScheduleItem | null {
+export function isScheduledDay(date: Date, schedule?: ScheduleItem[]): boolean {
   if (!schedule || schedule.length === 0) {
-    console.log('⚠️ isScheduledDay: No schedule provided');
-    return null;
+    return false;
   }
 
   const dayName = DAY_NAMES[getDay(date)];
   const matchingSchedule = schedule.find(s => s.day === dayName);
 
-  // Log first call for debugging
-  if (getDay(date) === 1) { // Monday
-    console.log(`🔍 Checking ${dayName} against schedule:`, schedule.map(s => s.day).join(', '));
-    console.log(`🔍 Match found:`, !!matchingSchedule);
-  }
-
-  return matchingSchedule || null;
+  return !!matchingSchedule;
 }
 
 /**
@@ -50,60 +39,27 @@ export function isAlreadyMarked(date: Date, attendanceRecords: ClassAttendance[]
  * Get the scheduled time for a given date
  */
 export function getScheduledTime(date: Date, schedule?: ScheduleItem[]): string | undefined {
-  const scheduleItem = isScheduledDay(date, schedule);
+  if (!schedule || schedule.length === 0) return undefined;
+
+  const dayName = DAY_NAMES[getDay(date)];
+  const scheduleItem = schedule.find(s => s.day === dayName);
   return scheduleItem?.time;
 }
 
-/**
- * Find the most recent unmarked scheduled class
- * Looks back from today to the class start date (or last 90 days max)
- */
-export function findMostRecentUnmarkedClass(
-  schedule: ScheduleItem[],
-  attendanceRecords: ClassAttendance[],
-  classStartDate?: Date
-): { date: Date; time: string } | null {
-  const today = new Date();
-  const unmarkedClasses: { date: Date; time: string }[] = [];
-
-  // Determine how far back to look
-  // If we have a class start date, use that; otherwise look back 90 days max
-  const startDate = classStartDate || subDays(today, 90);
-  const daysToCheck = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-
-  // Check each day going back from yesterday to the start date
-  for (let i = 1; i <= daysToCheck; i++) {
-    const checkDate = subDays(today, i);
-
-    // Stop if we've gone before the start date
-    if (checkDate < startDate) break;
-
-    const scheduleItem = isScheduledDay(checkDate, schedule);
-
-    if (scheduleItem && !isAlreadyMarked(checkDate, attendanceRecords)) {
-      unmarkedClasses.push({
-        date: checkDate,
-        time: scheduleItem.time,
-      });
-    }
-  }
-
-  // Return the most recent (first in array since we're going backwards)
-  return unmarkedClasses.length > 0 ? unmarkedClasses[0] : null;
-}
 
 /**
  * Get the next scheduled class date in the future
  */
-export function getNextScheduledClass(schedule?: ScheduleItem[]): { date: Date; time: string } | null {
+export function getNextScheduledClass(schedule?: ScheduleItem[], fromDate?: Date): { date: Date; time: string } | null {
   if (!schedule || schedule.length === 0) return null;
 
-  const today = new Date();
+  const startDate = fromDate || new Date();
 
   // Check the next 14 days to find the next scheduled class
   for (let i = 1; i <= 14; i++) {
-    const checkDate = addDays(today, i);
-    const scheduleItem = isScheduledDay(checkDate, schedule);
+    const checkDate = addDays(startDate, i);
+    const dayName = DAY_NAMES[getDay(checkDate)];
+    const scheduleItem = schedule.find(s => s.day === dayName);
 
     if (scheduleItem) {
       return {
@@ -118,90 +74,75 @@ export function getNextScheduledClass(schedule?: ScheduleItem[]): { date: Date; 
 
 /**
  * Main function to determine the state of the "Mark Attendance" button
+ * Simplified logic: button only handles TODAY, past dates via calendar
  */
 export function getMarkAttendanceButtonState(
   schedule: ScheduleItem[] | undefined,
-  attendanceRecords: ClassAttendance[],
-  classStartDate?: Date
+  attendanceRecords: ClassAttendance[]
 ): AttendanceButtonConfig {
   const today = new Date();
+  const todayMarked = isAlreadyMarked(today, attendanceRecords);
 
-  // Debug logging
-  console.log('🔴 Button Logic - Schedule:', JSON.stringify(schedule));
-  console.log('🔴 Button Logic - Attendance count:', attendanceRecords.length);
-  console.log('🔴 Button Logic - Class start date:', classStartDate);
-
-  // PRIORITY 1: Check if today is scheduled
+  // BRANCH 1: Schedule exists
   if (schedule && schedule.length > 0) {
-    const todayScheduleItem = isScheduledDay(today, schedule);
+    const isTodayScheduled = isScheduledDay(today, schedule);
 
-    if (todayScheduleItem) {
-      if (isAlreadyMarked(today, attendanceRecords)) {
+    // Case 1A: Today IS a scheduled day
+    if (isTodayScheduled) {
+      const scheduledTime = getScheduledTime(today, schedule);
+
+      if (!todayMarked) {
+        // State 1: Mark Today - Scheduled Day (Active)
         return {
-          state: 'marked_today',
-          label: 'MARKED TODAY',
-          date: today,
-          time: todayScheduleItem.time,
-          disabled: true,
-          color: 'success',
-        };
-      } else {
-        return {
-          state: 'mark_today',
-          label: 'MARK TODAY\'S ATTENDANCE',
-          date: today,
-          time: todayScheduleItem.time,
+          label: "MARK TODAY'S ATTENDANCE",
+          subtitle: `${format(today, 'EEE, MMM d, yyyy')}${scheduledTime ? `\n${scheduledTime}` : ''}`,
           disabled: false,
           color: 'primary',
+        };
+      } else {
+        // State 2: Today Marked - Scheduled Day (Success)
+        const nextClass = getNextScheduledClass(schedule, today);
+        return {
+          label: "Today's attendance marked!",
+          subtitle: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : '',
+          disabled: true,
+          color: 'success',
         };
       }
     }
 
-    // PRIORITY 2: Check for unmarked scheduled classes since class start date
-    const missedClass = findMostRecentUnmarkedClass(schedule, attendanceRecords, classStartDate);
-    console.log('🔴 Missed class found:', missedClass ? format(missedClass.date, 'MMM d, yyyy') : 'None');
-
-    if (missedClass) {
+    // Case 1B: Today is NOT a scheduled day
+    else {
+      // State 3: Not Scheduled Today (Informational)
+      const nextClass = getNextScheduledClass(schedule, today);
       return {
-        state: 'mark_missed',
-        label: 'MARK MISSED CLASS',
-        date: missedClass.date,
-        time: missedClass.time,
-        disabled: false,
-        color: 'warning',
+        label: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : 'No upcoming classes',
+        subtitle: nextClass?.time || '',
+        disabled: true,
+        color: 'neutral',
       };
     }
-
-    // PRIORITY 3: All caught up - show next class info
-    const nextClass = getNextScheduledClass(schedule);
-    return {
-      state: 'caught_up',
-      label: 'ALL CAUGHT UP',
-      date: today,
-      subtitle: nextClass ? `Next class: ${format(nextClass.date, 'EEE, MMM d')}` : undefined,
-      time: nextClass?.time,
-      disabled: true,
-      color: 'success',
-    };
   }
 
-  // PRIORITY 5: No schedule - simple mode
-  if (isAlreadyMarked(today, attendanceRecords)) {
-    return {
-      state: 'marked_today',
-      label: 'MARKED TODAY',
-      date: today,
-      disabled: true,
-      color: 'success',
-    };
-  } else {
-    return {
-      state: 'mark_today',
-      label: 'MARK TODAY\'S ATTENDANCE',
-      date: today,
-      disabled: false,
-      color: 'primary',
-    };
+  // BRANCH 2: No schedule
+  else {
+    if (!todayMarked) {
+      // State 4: Mark Today - No Schedule (Active)
+      return {
+        label: "MARK TODAY'S ATTENDANCE",
+        subtitle: format(today, 'EEE, MMM d, yyyy'),
+        disabled: false,
+        color: 'primary',
+      };
+    } else {
+      // State 5: Today Marked - No Schedule (Success)
+      return {
+        label: "Today's attendance marked!",
+        subtitle: format(today, 'EEE, MMM d, yyyy'),
+        disabled: true,
+        color: 'success',
+      };
+    }
   }
 }
 

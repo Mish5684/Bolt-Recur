@@ -108,9 +108,8 @@ export default function ClassDetailScreen({ route, navigation }: any) {
   const metrics = calculateClassMetrics(attendance, payments);
   const primaryCurrency = payments.length > 0 ? payments[0].currency : 'USD';
 
-  // Pass class start date for proper missed class detection
-  const classStartDate = classData?.created_at ? new Date(classData.created_at) : undefined;
-  const buttonConfig = getMarkAttendanceButtonState(classData?.schedule, attendance, classStartDate);
+  // Get button state using simplified logic
+  const buttonConfig = getMarkAttendanceButtonState(classData?.schedule, attendance);
 
   const handleEditPayment = (payment: Payment) => {
     navigation.navigate('RecordPayment', {
@@ -274,30 +273,29 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             style={({ pressed }) => [
               styles.smartAttendanceButton,
               buttonConfig.color === 'primary' && styles.smartAttendanceButtonPrimary,
-              buttonConfig.color === 'warning' && styles.smartAttendanceButtonWarning,
               buttonConfig.color === 'success' && styles.smartAttendanceButtonSuccess,
+              buttonConfig.color === 'neutral' && styles.smartAttendanceButtonNeutral,
               buttonConfig.disabled && styles.smartAttendanceButtonDisabled,
               pressed && !buttonConfig.disabled && styles.smartAttendanceButtonPressed,
             ]}
-            onPress={() => !buttonConfig.disabled && handleMarkAttendance(buttonConfig.date)}
+            onPress={() => !buttonConfig.disabled && handleMarkAttendance(new Date())}
             disabled={buttonConfig.disabled}
           >
             <Text style={[
               styles.smartAttendanceButtonLabel,
               buttonConfig.disabled && styles.smartAttendanceButtonLabelDisabled
             ]}>
-              {buttonConfig.state === 'mark_today' && '✓ '}
-              {buttonConfig.state === 'mark_missed' && '📌 '}
-              {buttonConfig.state === 'marked_today' && '✓ '}
-              {buttonConfig.state === 'caught_up' && '✓ '}
+              {!buttonConfig.disabled && '✓ '}
               {buttonConfig.label}
             </Text>
-            <Text style={[
-              styles.smartAttendanceButtonSubtext,
-              buttonConfig.disabled && styles.smartAttendanceButtonLabelDisabled
-            ]}>
-              {buttonConfig.subtitle || `${format(buttonConfig.date, 'EEE, MMM d, yyyy')}${buttonConfig.time ? ` · ${buttonConfig.time}` : ''}`}
-            </Text>
+            {buttonConfig.subtitle && (
+              <Text style={[
+                styles.smartAttendanceButtonSubtext,
+                buttonConfig.disabled && styles.smartAttendanceButtonLabelDisabled
+              ]}>
+                {buttonConfig.subtitle}
+              </Text>
+            )}
           </Pressable>
 
           <View style={styles.infoTilesContainer}>
@@ -580,8 +578,8 @@ const styles = StyleSheet.create({
   smartAttendanceButtonPrimary: {
     backgroundColor: '#2563EB',
   },
-  smartAttendanceButtonWarning: {
-    backgroundColor: '#F59E0B',
+  smartAttendanceButtonNeutral: {
+    backgroundColor: '#E5E7EB',
   },
   smartAttendanceButtonSuccess: {
     backgroundColor: '#10B981',
