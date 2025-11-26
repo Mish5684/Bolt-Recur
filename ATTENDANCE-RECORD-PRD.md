@@ -93,7 +93,9 @@ interface Payment {
 
 **Primary Action Component** - Adapts based on schedule and attendance state
 
-#### State 1: Mark Today (Today is scheduled & unmarked)
+This button uses simplified logic focused on TODAY with contextual information about next class.
+
+#### State 1: Mark Today - Scheduled Day (Active)
 ```
 ┌─────────────────────────────────┐
 │   ✓ MARK TODAY'S ATTENDANCE     │
@@ -101,119 +103,131 @@ interface Payment {
 │      4:00 PM                    │
 └─────────────────────────────────┘
 ```
+- **When:** Schedule exists + Today is a scheduled day + Not marked yet
 - **Color:** Blue/Primary
 - **Action:** Mark attendance for today
 - **Shows:** Current date + time from schedule
 
-#### State 2: Marked Today (Today marked successfully)
+#### State 2: Today Marked - Scheduled Day (Success)
 ```
 ┌─────────────────────────────────┐
-│   ✓ MARKED TODAY                │
-│      (Thu, Dec 12, 2024)        │
-│      4:00 PM                    │
-└─────────────────────────────────┘
-```
-- **Color:** Green/Success (light background)
-- **Action:** Disabled
-- **Purpose:** Success confirmation
-
-#### State 3: Mark Missed Class (Reminder for unmarked scheduled class)
-```
-┌─────────────────────────────────┐
-│   📌 MARK MISSED CLASS          │
-│      (Mon, Dec 9, 2024)         │
-│      4:00 PM                    │
-└─────────────────────────────────┘
-```
-- **Color:** Orange/Warning
-- **Action:** Mark the most recent unmarked scheduled class
-- **Shows:** Date + time of missed class
-
-#### State 4: All Caught Up (Everything marked)
-```
-┌─────────────────────────────────┐
-│   ✓ ALL CAUGHT UP               │
+│   ✓ Today's attendance marked!  │
 │      Next class: Mon, Dec 16    │
 └─────────────────────────────────┘
 ```
-- **Color:** Green/Success
-- **Action:** Disabled (informational)
-- **Shows:** Next scheduled class date
+- **When:** Schedule exists + Today is a scheduled day + Already marked
+- **Color:** Green/Success (light background)
+- **Action:** Disabled
+- **Shows:** Success message + next scheduled class
+
+#### State 3: Not Scheduled Today (Informational)
+```
+┌─────────────────────────────────┐
+│      Next class: Mon, Dec 16    │
+│             4:00 PM             │
+└─────────────────────────────────┘
+```
+- **When:** Schedule exists + Today is NOT a scheduled day
+- **Color:** Gray/Neutral (light background)
+- **Action:** Disabled (informational only)
+- **Shows:** Next scheduled class date & time
+
+#### State 4: Mark Today - No Schedule (Active)
+```
+┌─────────────────────────────────┐
+│   ✓ MARK TODAY'S ATTENDANCE     │
+│      (Thu, Dec 12, 2024)        │
+└─────────────────────────────────┘
+```
+- **When:** No schedule + Today not marked yet
+- **Color:** Blue/Primary
+- **Action:** Mark attendance for today
+- **Shows:** Current date (no time)
+
+#### State 5: Today Marked - No Schedule (Success)
+```
+┌─────────────────────────────────┐
+│   ✓ Today's attendance marked!  │
+│      (Thu, Dec 12, 2024)        │
+└─────────────────────────────────┘
+```
+- **When:** No schedule + Today already marked
+- **Color:** Green/Success (light background)
+- **Action:** Disabled
+- **Shows:** Success message + current date
 
 ---
 
-### Button Logic - Priority Order
+### Button Logic - Simplified Decision Tree
 
 ```javascript
 function getMarkAttendanceButtonState(classData, attendanceRecords) {
   const today = new Date();
   const schedule = classData.schedule; // [{day: "Monday", time: "4:00 PM"}, ...]
+  const todayMarked = isAlreadyMarked(today, attendanceRecords);
 
-  // PRIORITY 1: Check if today is scheduled
-  if (schedule && isScheduledDay(today, schedule)) {
-    if (isAlreadyMarked(today, attendanceRecords)) {
+  // BRANCH 1: Schedule exists
+  if (schedule && schedule.length > 0) {
+    const isTodayScheduled = isScheduledDay(today, schedule);
+
+    // Case 1A: Today IS a scheduled day
+    if (isTodayScheduled) {
+      const scheduledTime = getScheduledTime(today, schedule);
+
+      if (!todayMarked) {
+        // State 1: Mark Today - Scheduled Day (Active)
+        return {
+          label: "MARK TODAY'S ATTENDANCE",
+          subtitle: `${formatDate(today)}\n${scheduledTime}`,
+          disabled: false,
+          color: "primary",
+          action: () => markAttendance(today)
+        };
+      } else {
+        // State 2: Today Marked - Scheduled Day (Success)
+        const nextClass = getNextScheduledClass(schedule, today);
+        return {
+          label: "Today's attendance marked!",
+          subtitle: `Next class: ${formatDate(nextClass.date)}`,
+          disabled: true,
+          color: "success"
+        };
+      }
+    }
+
+    // Case 1B: Today is NOT a scheduled day
+    else {
+      // State 3: Not Scheduled Today (Informational)
+      const nextClass = getNextScheduledClass(schedule, today);
       return {
-        state: "marked_today",
-        label: "MARKED TODAY",
-        date: today,
-        time: getScheduledTime(today, schedule),
+        label: `Next class: ${formatDate(nextClass.date)}`,
+        subtitle: nextClass.time,
+        disabled: true,
+        color: "neutral"
+      };
+    }
+  }
+
+  // BRANCH 2: No schedule
+  else {
+    if (!todayMarked) {
+      // State 4: Mark Today - No Schedule (Active)
+      return {
+        label: "MARK TODAY'S ATTENDANCE",
+        subtitle: formatDate(today),
+        disabled: false,
+        color: "primary",
+        action: () => markAttendance(today)
+      };
+    } else {
+      // State 5: Today Marked - No Schedule (Success)
+      return {
+        label: "Today's attendance marked!",
+        subtitle: formatDate(today),
         disabled: true,
         color: "success"
       };
-    } else {
-      return {
-        state: "mark_today",
-        label: "MARK TODAY'S ATTENDANCE",
-        date: today,
-        time: getScheduledTime(today, schedule),
-        disabled: false,
-        color: "primary"
-      };
     }
-  }
-
-  // PRIORITY 2: Check for unmarked scheduled classes in last 7 days
-  if (schedule) {
-    const missedClass = findMostRecentUnmarkedClass(schedule, attendanceRecords, 7);
-    if (missedClass) {
-      return {
-        state: "mark_missed",
-        label: "MARK MISSED CLASS",
-        date: missedClass.date,
-        time: missedClass.time,
-        disabled: false,
-        color: "warning"
-      };
-    }
-
-    // PRIORITY 3: All caught up
-    const nextClass = getNextScheduledClass(schedule);
-    return {
-      state: "caught_up",
-      label: "ALL CAUGHT UP",
-      subtitle: `Next class: ${formatDate(nextClass.date)}`,
-      disabled: true,
-      color: "success"
-    };
-  }
-
-  // PRIORITY 4: No schedule - simple mode
-  if (isAlreadyMarked(today, attendanceRecords)) {
-    return {
-      state: "marked_today",
-      label: "MARKED TODAY",
-      date: today,
-      disabled: true,
-      color: "success"
-    };
-  } else {
-    return {
-      state: "mark_today",
-      label: "MARK TODAY'S ATTENDANCE",
-      date: today,
-      disabled: false,
-      color: "primary"
-    };
   }
 }
 ```
@@ -223,16 +237,19 @@ function getMarkAttendanceButtonState(classData, attendanceRecords) {
 **isScheduledDay(date, schedule)**
 - Checks if given date's day of week matches any schedule item
 - Example: If schedule has `{day: "Monday", time: "4:00 PM"}`, returns true for any Monday
+- Returns: `boolean`
 
-**findMostRecentUnmarkedClass(schedule, attendanceRecords, daysBack)**
-- Looks back `daysBack` days (default: 7)
-- Finds all scheduled class days in that period
-- Filters out days that already have attendance records
-- Returns the most recent unmarked scheduled class
+**getScheduledTime(date, schedule)**
+- Gets the scheduled time for a given date
+- Returns: `string` (e.g., "4:00 PM")
 
-**getNextScheduledClass(schedule)**
-- Finds the next scheduled class date in the future
-- Returns date + time from schedule
+**getNextScheduledClass(schedule, fromDate)**
+- Finds the next scheduled class date from given date
+- Returns: `{ date: Date, time: string }`
+
+**isAlreadyMarked(date, attendanceRecords)**
+- Checks if attendance exists for the given date
+- Returns: `boolean`
 
 ---
 
@@ -243,43 +260,30 @@ function getMarkAttendanceButtonState(classData, attendanceRecords) {
 - Schedule: Mon & Thu @ 4 PM
 - Today: Thursday, Dec 12
 
-**Scenario A:** Thu Dec 12 NOT marked yet
-- **Button Shows:** "MARK TODAY'S ATTENDANCE (Thu, Dec 12)"
-- **User Action:** Tap button
-- **Result:** Dec 12 marked, button changes to "MARKED TODAY"
+**Scenario A:** Thu Dec 12 NOT marked yet (State 1)
+- **Button Shows:** "MARK TODAY'S ATTENDANCE" + "Thu, Dec 12, 2024" + "4:00 PM"
+- **Color:** Blue (active)
+- **User Action:** Tap button → Mark Dec 12
+- **Result:** Button changes to State 2
 
-**Scenario B:** Thu Dec 12 IS marked, Mon Dec 9 NOT marked
-- **Button Shows:** "MARK MISSED CLASS (Mon, Dec 9)"
-- **User Action:** Tap button
-- **Result:** Dec 9 marked, button updates to next state
-
-**Scenario C:** Thu Dec 12 marked, Mon Dec 9 marked
-- **Button Shows:** "ALL CAUGHT UP - Next class: Mon, Dec 16"
-- **User Action:** None (informational)
+**Scenario B:** Thu Dec 12 IS marked (State 2)
+- **Button Shows:** "Today's attendance marked!" + "Next class: Mon, Dec 16"
+- **Color:** Green (disabled)
+- **User Action:** None (can mark past dates via calendar if needed)
 
 ---
 
-#### Example 2: Coming Back After Vacation
+#### Example 2: Weekend Check (Not Scheduled Today)
 **Setup:**
 - Schedule: Mon & Thu @ 4 PM
-- Today: Monday, Dec 16
-- Unmarked classes: Dec 12, Dec 9, Dec 5, Dec 2
+- Today: Saturday, Dec 14
+- Last class: Thu Dec 12 (marked ✓)
 
-**Flow:**
-1. **State:** Today (Dec 16) NOT marked
-   - **Button:** "MARK TODAY'S ATTENDANCE (Mon, Dec 16)"
-   - **Action:** Tap → Mark Dec 16
-
-2. **State:** Dec 16 marked, Dec 12 NOT marked (within 7 days)
-   - **Button:** "MARK MISSED CLASS (Thu, Dec 12)"
-   - **Action:** Tap → Mark Dec 12
-
-3. **State:** Dec 16 marked, Dec 12 marked, Dec 9 NOT marked (within 7 days)
-   - **Button:** "MARK MISSED CLASS (Mon, Dec 9)"
-   - **Action:** Tap → Mark Dec 9
-
-4. **State:** Everything within 7 days marked (Dec 5 is 11 days ago, ignored)
-   - **Button:** "ALL CAUGHT UP - Next class: Thu, Dec 19"
+**State:** Not a scheduled day (State 3)
+- **Button Shows:** "Next class: Mon, Dec 16" + "4:00 PM"
+- **Color:** Gray (informational)
+- **User Action:** None (informational only)
+- **Note:** User can still mark attendance via calendar if they attended a makeup class
 
 ---
 
@@ -288,26 +292,35 @@ function getMarkAttendanceButtonState(classData, attendanceRecords) {
 - Schedule: (empty/undefined)
 - Today: Wednesday, Dec 11
 
-**Scenario A:** Dec 11 NOT marked
-- **Button Shows:** "MARK TODAY'S ATTENDANCE (Wed, Dec 11)"
-- **User Action:** Tap → Mark Dec 11 → Button shows "MARKED TODAY"
+**Scenario A:** Dec 11 NOT marked (State 4)
+- **Button Shows:** "MARK TODAY'S ATTENDANCE" + "Wed, Dec 11"
+- **Color:** Blue (active)
+- **User Action:** Tap → Mark Dec 11
+- **Result:** Button changes to State 5
 
-**Scenario B:** Dec 11 marked
-- **Button Shows:** "MARKED TODAY (Wed, Dec 11)" [Disabled]
-- **Note:** User can still use calendar to mark other days manually
+**Scenario B:** Dec 11 marked (State 5)
+- **Button Shows:** "Today's attendance marked!" + "Wed, Dec 11"
+- **Color:** Green (disabled)
+- **Note:** User can mark other days via calendar
 
 ---
 
-#### Example 4: Weekend Check
+#### Example 4: Coming Back After Missing Classes
 **Setup:**
 - Schedule: Mon & Thu @ 4 PM
-- Today: Saturday, Dec 14
-- Last class: Thu Dec 12 (marked ✓)
-- Next class: Mon Dec 16
+- Today: Monday, Dec 16
+- Unmarked past classes: Dec 12, Dec 9, Dec 5, Dec 2
 
-**State:** All recent classes marked
-- **Button Shows:** "ALL CAUGHT UP - Next class: Mon, Dec 16"
-- **Purpose:** Informational, no action needed
+**Button Shows:** "MARK TODAY'S ATTENDANCE" + "Mon, Dec 16, 2024" + "4:00 PM"
+**User Action:** Tap → Mark today
+
+**For Past Classes:**
+- User scrolls to calendar
+- Sees empty circles (○) on Dec 12, Dec 9, Dec 5, Dec 2
+- Taps each date individually to mark them
+- Calendar updates with filled dots (●)
+
+**Key Difference:** The button ONLY handles TODAY. Past dates are marked via calendar interaction.
 
 ---
 
@@ -501,18 +514,21 @@ Oct 1, 2024              INR 4,000  ⋮
 
 2. **isScheduledDay(date, schedule)**
    - Checks if a specific date matches any schedule item
-   - Returns boolean + matching schedule item (for time display)
+   - Returns boolean
 
-3. **findMostRecentUnmarkedClass(schedule, attendanceRecords, daysBack)**
-   - Scans back N days from today
-   - Finds scheduled days without attendance records
-   - Returns most recent one
+3. **getScheduledTime(date, schedule)**
+   - Gets the time for a scheduled day
+   - Returns string (e.g., "4:00 PM")
 
 4. **getNextScheduledClass(schedule, fromDate)**
    - Finds next scheduled class date from given date
-   - Returns date + time
+   - Returns `{ date: Date, time: string }`
 
-5. **calculateMetrics(attendanceRecords, payments)**
+5. **isAlreadyMarked(date, attendanceRecords)**
+   - Checks if attendance exists for given date
+   - Returns boolean
+
+6. **calculateMetrics(attendanceRecords, payments)**
    - Returns object with all tile values (this year, this month, remaining)
    - Includes financial calculations (spent this year, cost per class)
 
@@ -526,13 +542,11 @@ interface ClassDetailState {
   payments: Payment[];
   selectedMonth: Date;  // For calendar dropdown
   buttonState: {
-    state: 'mark_today' | 'marked_today' | 'mark_missed' | 'caught_up';
     label: string;
-    date: Date;
-    time?: string;
-    subtitle?: string;
+    subtitle: string;
     disabled: boolean;
-    color: 'primary' | 'success' | 'warning';
+    color: 'primary' | 'success' | 'neutral';
+    action?: () => void;
   };
 }
 ```
@@ -583,16 +597,17 @@ Total: 1-2 taps
 Total: 2 taps
 ```
 
-### Flow 4: Catch Up After Vacation
+### Flow 4: Catch Up After Missing Classes
 ```
 1. User opens class detail page
-2. Button shows "MARK TODAY'S ATTENDANCE" (current date)
+2. Button shows "MARK TODAY'S ATTENDANCE" (if today is scheduled)
 3. User taps → Today marked
-4. Button shows "MARK MISSED CLASS" (most recent)
-5. User taps → Missed class marked
-6. Repeat until "ALL CAUGHT UP" appears
+4. Button updates to show "Next class: [date]" or success message
+5. User scrolls to calendar section
+6. User taps each unmarked scheduled day (shown as ○)
+7. Each tap marks that date and updates metrics
 
-Total: N taps for N unmarked classes
+Total: 1 tap for today + N taps for N missed classes (via calendar)
 ```
 
 ---
@@ -604,9 +619,8 @@ Total: N taps for N unmarked classes
 | Element | State | Color |
 |---------|-------|-------|
 | Mark Today Button | Active | Blue (#2563EB) |
-| Mark Missed Button | Active | Orange (#F59E0B) |
-| Marked Today Button | Disabled | Green (#10B981) with light bg |
-| All Caught Up Button | Disabled | Green (#10B981) with light bg |
+| Today Marked Button | Disabled | Green (#10B981) with light bg |
+| Next Class Info Button | Disabled | Gray (#6B7280) with light bg |
 | Attended dot | Default | Green (#10B981) |
 | Scheduled circle | Default | Gray (#D1D5DB) |
 | Future dates | Disabled | Gray (#9CA3AF) |
@@ -635,7 +649,7 @@ Total: N taps for N unmarked classes
 ### Primary Metrics
 1. **Time to mark attendance:** Target < 3 seconds
 2. **Error rate:** Target < 2% (wrong dates marked)
-3. **Missed class reminders acted on:** Target > 70%
+3. **Calendar usage for past dates:** Track how often users mark past dates via calendar
 
 ### Secondary Metrics
 1. **Calendar usage:** % of users who mark past dates
@@ -676,7 +690,7 @@ Total: N taps for N unmarked classes
 ### UI Edge Cases
 1. **Very long class names:** Truncate with ellipsis after 30 characters
 2. **No schedule, no attendance:** Show empty state with helpful message
-3. **Many missed classes (>5):** Still show only most recent one in button
+3. **No next scheduled class found:** Handle gracefully (e.g., schedule might be incomplete)
 4. **Month dropdown at year boundary:** Handle Dec → Jan transition correctly
 
 ---
@@ -694,9 +708,9 @@ Total: N taps for N unmarked classes
 ## Testing Checklist
 
 ### Unit Tests
-- [ ] Button state logic with various date/schedule combinations
+- [ ] Button state logic with various date/schedule combinations (5 states)
 - [ ] Metric calculations (this year, this month, remaining)
-- [ ] Date helper functions (isScheduledDay, findMostRecentUnmarkedClass)
+- [ ] Date helper functions (isScheduledDay, getScheduledTime, getNextScheduledClass)
 - [ ] Cost per class calculation edge cases
 
 ### Integration Tests
@@ -708,8 +722,9 @@ Total: N taps for N unmarked classes
 ### E2E Tests
 - [ ] Complete flow: open page → mark today → verify in database
 - [ ] Complete flow: mark past date via calendar → verify metrics
-- [ ] Complete flow: catch up after vacation (multiple missed classes)
+- [ ] Complete flow: mark today + multiple past dates via calendar
 - [ ] Complete flow: remove incorrect date → verify metrics recalc
+- [ ] Test all 5 button states render correctly
 
 ---
 
@@ -780,4 +795,5 @@ WHERE class_id = ?
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2024-12-15 | 1.0 | Initial PRD created | - |
+| 2025-11-26 | 2.0 | Simplified button logic - removed "mark missed class" state, focus on TODAY only. Past dates handled via calendar. | - |
 
