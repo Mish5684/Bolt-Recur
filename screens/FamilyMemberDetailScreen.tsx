@@ -170,13 +170,12 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
 
         {item.latitude && item.longitude && (
           <TouchableOpacity
-            style={styles.locationBadge}
             onPress={(e) => {
               e.stopPropagation();
               openMap(item.latitude!, item.longitude!, item.address);
             }}
           >
-            <Text style={styles.locationBadgeText}>📍 {item.address || 'View Location'}</Text>
+            <Text style={styles.locationLink}>📍 Get Directions</Text>
           </TouchableOpacity>
         )}
 
@@ -463,19 +462,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 8,
   },
-  locationBadge: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  locationBadgeText: {
+  locationLink: {
     fontSize: 13,
-    color: '#374151',
+    color: '#2563EB',
     fontWeight: '500',
+    textDecorationLine: 'underline',
+    marginBottom: 12,
   },
   nextClassContainer: {
     backgroundColor: '#EFF6FF',
