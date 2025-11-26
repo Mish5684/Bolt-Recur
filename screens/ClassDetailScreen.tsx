@@ -235,7 +235,15 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          {classData.type && <Text style={styles.classType}>{classData.type}</Text>}
+          {classData.latitude && classData.longitude && (
+            <View style={styles.locationRow}>
+              <TouchableOpacity
+                onPress={() => getDirections(classData.latitude!, classData.longitude!, classData.location_name)}
+              >
+                <Text style={styles.directionsLink}>Get Class Directions</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.infoRow}>
             <Text style={styles.instructor}>
@@ -254,22 +262,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
               <Text style={styles.editIconSmall}>✏️</Text>
             </TouchableOpacity>
           </View>
-
-          {classData.latitude && classData.longitude && classData.address && (
-            <View style={styles.infoRow}>
-              <View style={styles.addressContainer}>
-                <Text style={styles.address}>📍 {classData.address}</Text>
-                <TouchableOpacity
-                  onPress={() => getDirections(classData.latitude!, classData.longitude!, classData.location_name)}
-                >
-                  <Text style={styles.directionsLink}>Get Directions</Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity onPress={handleEditClass}>
-                <Text style={styles.editIconSmall}>✏️</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           <Pressable
             style={({ pressed }) => [
@@ -485,17 +477,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     flex: 1,
   },
-  addressContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  address: {
-    fontSize: 15,
-    color: '#6B7280',
-    flex: 1,
+  locationRow: {
+    marginBottom: 8,
+    marginTop: -4,
   },
   directionsLink: {
     fontSize: 13,
