@@ -163,38 +163,11 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {item.type && <Text style={styles.classType}>{item.type}</Text>}
-        {item.instructor && (
-          <Text style={styles.instructor}>👨‍🏫 {item.instructor}</Text>
-        )}
-
-        {item.latitude && item.longitude && (
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              openMap(item.latitude!, item.longitude!, item.address);
-            }}
-          >
-            <Text style={styles.locationLink}>📍 Get Directions</Text>
-          </TouchableOpacity>
-        )}
-
         {nextClass && (
-          <View style={styles.nextClassContainer}>
-            <Text style={styles.nextClassLabel}>📅 Next class: {nextClass}</Text>
-          </View>
+          <Text style={styles.nextClassText}>📅 Next: {nextClass}</Text>
         )}
 
-        <View style={styles.classStats}>
-          <Text style={styles.statText}>✓ {stats.attended} attended</Text>
-          <Text style={styles.statText}>{stats.remaining} remaining</Text>
-        </View>
-
-        {!hasCostData && (
-          <Text style={styles.noPaymentText}>No payments recorded</Text>
-        )}
-
-        <Text style={styles.tapHint}>Tap to mark attendance or record payment</Text>
+        <Text style={styles.remainingText}>{stats.remaining} classes remaining</Text>
       </Pressable>
     );
   };
@@ -396,32 +369,26 @@ const styles = StyleSheet.create({
   },
   classCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 12,
     marginHorizontal: 20,
-    marginBottom: 16,
-    borderWidth: 2,
+    marginBottom: 12,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   classCardPressed: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#D1D5DB',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
-    elevation: 1,
-    transform: [{ scale: 0.98 }],
+    backgroundColor: '#F3F4F6',
   },
   classHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   classHeaderLeft: {
     flex: 1,
@@ -432,13 +399,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   className: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1F2937',
   },
   chevron: {
-    fontSize: 28,
-    color: '#D1D5DB',
+    fontSize: 24,
+    color: '#9CA3AF',
     fontWeight: '300',
   },
   priceBadge: {
@@ -452,53 +419,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  classType: {
-    fontSize: 14,
+  nextClassText: {
+    fontSize: 13,
     color: '#6B7280',
     marginBottom: 4,
   },
-  instructor: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  locationLink: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '500',
-    textDecorationLine: 'underline',
-    marginBottom: 12,
-  },
-  nextClassContainer: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  nextClassLabel: {
-    fontSize: 14,
-    color: '#2563EB',
-    fontWeight: '500',
-  },
-  classStats: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-  },
-  statText: {
+  remainingText: {
     fontSize: 13,
     color: '#6B7280',
-  },
-  noPaymentText: {
-    fontSize: 12,
-    color: '#F59E0B',
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  tapHint: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
   },
   emptyState: {
     paddingHorizontal: 20,
