@@ -21,6 +21,10 @@ import AttendanceCalendar from '../components/AttendanceCalendar';
 import { getMarkAttendanceButtonState, calculateClassMetrics } from '../shared/utils/attendanceUtils';
 import { getDirections } from '../shared/utils/locationUtils';
 
+const formatCurrency = (amount: number): string => {
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
 export default function ClassDetailScreen({ route, navigation }: any) {
   const { memberId, classId } = route.params;
   const {
@@ -157,7 +161,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
           <Text style={styles.paymentClasses}>{item.classes_paid} classes</Text>
         </View>
         <Text style={styles.paymentAmount}>
-          {item.currency} {item.amount.toFixed(2)}
+          {item.currency} {formatCurrency(item.amount)}
         </Text>
         <View style={styles.paymentActionsContainer}>
           <TouchableOpacity
@@ -330,14 +334,16 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          <View style={styles.financialSummary}>
-            <Text style={styles.financialSummaryText}>
-              Spent this year: {primaryCurrency} {metrics.spentThisYear.toFixed(2)}
-            </Text>
-            <Text style={styles.financialSummaryText}>
-              Cost per class: {primaryCurrency} {metrics.costPerClass.toFixed(2)}
-            </Text>
-          </View>
+          {payments.length > 0 && (
+            <View style={styles.financialSummary}>
+              <Text style={styles.financialSummaryText}>
+                Spent this year: {primaryCurrency} {formatCurrency(metrics.spentThisYear)}
+              </Text>
+              <Text style={styles.financialSummaryText}>
+                Cost per class: {primaryCurrency} {formatCurrency(metrics.costPerClass)}
+              </Text>
+            </View>
+          )}
 
           <Text style={styles.sectionTitle}>Attendance</Text>
         </>
@@ -361,7 +367,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             ]}
             onPress={handleRecordPayment}
           >
-            <Text style={styles.recordPaymentButtonText}>💰 RECORD PAYMENT</Text>
+            <Text style={styles.recordPaymentButtonText}>RECORD PAYMENT</Text>
           </Pressable>
         </>
       );
@@ -388,7 +394,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
           style={styles.deleteClassButton}
           onPress={handleDeleteClass}
         >
-          <Text style={styles.deleteClassText}>🗑️ Delete Class</Text>
+          <Text style={styles.deleteClassText}>Delete Class</Text>
         </TouchableOpacity>
       );
     }
@@ -612,19 +618,25 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   recordPaymentButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#10B981',
     borderRadius: 12,
     paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#2563EB',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   recordPaymentButtonPressed: {
-    backgroundColor: '#F3F4F6',
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   recordPaymentButtonText: {
-    color: '#2563EB',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
