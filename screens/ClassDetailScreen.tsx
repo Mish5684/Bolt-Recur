@@ -267,8 +267,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
                 country: classData.country,
                 place_id: classData.place_id,
               }}
-              showMap={true}
-              showDirectionsButton={true}
             />
           )}
 
