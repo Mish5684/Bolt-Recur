@@ -18,8 +18,8 @@ import { useRecur } from '../shared/stores/recur';
 import { ClassAttendance, Payment } from '../shared/types/database';
 import { format, parseISO } from 'date-fns';
 import AttendanceCalendar from '../components/AttendanceCalendar';
-import LocationDisplay from '../components/LocationDisplay';
 import { getMarkAttendanceButtonState, calculateClassMetrics } from '../shared/utils/attendanceUtils';
+import { getDirections } from '../shared/utils/locationUtils';
 
 export default function ClassDetailScreen({ route, navigation }: any) {
   const { memberId, classId } = route.params;
@@ -255,19 +255,20 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {classData.latitude && classData.longitude && (
-            <LocationDisplay
-              location={{
-                location_name: classData.location_name,
-                address: classData.address,
-                latitude: classData.latitude,
-                longitude: classData.longitude,
-                pincode: classData.pincode,
-                city: classData.city,
-                country: classData.country,
-                place_id: classData.place_id,
-              }}
-            />
+          {classData.latitude && classData.longitude && classData.address && (
+            <View style={styles.infoRow}>
+              <View style={styles.addressContainer}>
+                <Text style={styles.address}>📍 {classData.address}</Text>
+                <TouchableOpacity
+                  onPress={() => getDirections(classData.latitude!, classData.longitude!, classData.location_name)}
+                >
+                  <Text style={styles.directionsLink}>Get Directions</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={handleEditClass}>
+                <Text style={styles.editIconSmall}>✏️</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           <Pressable
@@ -483,6 +484,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#6B7280',
     flex: 1,
+  },
+  addressContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  address: {
+    fontSize: 15,
+    color: '#6B7280',
+    flex: 1,
+  },
+  directionsLink: {
+    fontSize: 13,
+    color: '#2563EB',
+    textDecorationLine: 'underline',
   },
   classNameContainer: {
     flexDirection: 'row',
