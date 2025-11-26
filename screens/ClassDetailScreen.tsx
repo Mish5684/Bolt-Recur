@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRecur } from '../shared/stores/recur';
 import { ClassAttendance, Payment } from '../shared/types/database';
 import { format, parseISO } from 'date-fns';
@@ -38,9 +39,11 @@ export default function ClassDetailScreen({ route, navigation }: any) {
 
   const classData = classes.find((c) => c.id === classId);
 
-  useEffect(() => {
-    loadData();
-  }, [memberId, classId]);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [memberId, classId])
+  );
 
   const loadData = async () => {
     await fetchClasses();

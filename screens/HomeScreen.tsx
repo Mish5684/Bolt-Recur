@@ -29,13 +29,9 @@ export default function HomeScreen({ navigation }: any) {
   } = useRecur();
   const [menuVisibleForMember, setMenuVisibleForMember] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   useFocusEffect(
     React.useCallback(() => {
-      checkOnboardingStatus();
+      loadData();
     }, [])
   );
 

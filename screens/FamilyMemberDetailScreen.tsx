@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   FlatList,
   SafeAreaView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRecur } from '../shared/stores/recur';
 import { ClassWithDetails } from '../shared/types/database';
 import ClassLocationsMap from '../components/ClassLocationsMap';
@@ -21,9 +22,11 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
 
   const member = familyMembers.find((m) => m.id === memberId);
 
-  useEffect(() => {
-    loadData();
-  }, [memberId]);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [memberId])
+  );
 
   const loadData = async () => {
     await fetchAllFamilyMembers();
