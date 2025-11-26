@@ -338,11 +338,11 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   legendText: {
     fontSize: 12,
     color: '#6B7280',
+    marginLeft: 8,
   },
   hint: {
     fontSize: 12,
