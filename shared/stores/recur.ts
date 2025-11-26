@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import { FamilyMember, Payment, ClassAttendance, Class, ClassSubscription, ClassWithDetails } from '../types/database';
+import { createOptimisticAddition, createOptimisticDeletion, createOptimisticUpdate } from '../utils/optimisticHelpers';
 
 interface CostPerClass {
   classId: string;
@@ -376,193 +377,210 @@ export const useRecur = create<RecurStore>((set, get) => ({
   },
 
   addFamilyMember: async (member) => {
-    try {
-      set({ loading: true, error: null });
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('family_members')
-        .insert([{ ...member, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      await get().fetchAllFamilyMembers();
-      return data.id;
-    } catch (error) {
-      set({ error: (error as Error).message });
+    set({ error: null });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      set({ error: 'Not authenticated' });
       return null;
-    } finally {
-      set({ loading: false });
     }
+
+    return createOptimisticAddition<RecurStore, FamilyMember>({
+      stateKey: 'familyMembers',
+      item: { ...member, user_id: user.id } as FamilyMember,
+      apiCall: async () => {
+        const { data, error } = await supabase
+          .from('family_members')
+          .insert([{ ...member, user_id: user.id }])
+          .select()
+          .single();
+        return { data, error };
+      },
+      onSuccess: async () => {
+        await get().fetchAllFamilyMembers();
+      },
+    }, set, get)();
   },
 
   updateFamilyMember: async (memberId: string, member: { name: string; avatar: string; relation: string }) => {
-    try {
-      set({ loading: true, error: null });
-      const { error } = await supabase
-        .from('family_members')
-        .update(member)
-        .eq('id', memberId);
+    set({ error: null });
 
-      if (error) throw error;
-      await get().fetchAllFamilyMembers();
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+    return createOptimisticUpdate<RecurStore, FamilyMember>({
+      stateKey: 'familyMembers',
+      itemId: memberId,
+      updates: member,
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('family_members')
+          .update(member)
+          .eq('id', memberId);
+        return { error };
+      },
+      onSuccess: async () => {
+        await get().fetchAllFamilyMembers();
+      },
+    }, set, get)();
   },
 
   deleteFamilyMember: async (memberId: string) => {
-    try {
-      set({ loading: true, error: null });
+    set({ error: null });
 
-      const { error: subscriptionError } = await supabase
-        .from('class_subscriptions')
-        .delete()
-        .eq('family_member_id', memberId);
+    return createOptimisticDeletion<RecurStore>({
+      stateKey: 'familyMembers',
+      itemId: memberId,
+      apiCall: async () => {
+        const { error: subscriptionError } = await supabase
+          .from('class_subscriptions')
+          .delete()
+          .eq('family_member_id', memberId);
 
-      if (subscriptionError) throw subscriptionError;
+        if (subscriptionError) return { error: subscriptionError };
 
-      const { error: attendanceError } = await supabase
-        .from('class_attendance')
-        .delete()
-        .eq('family_member_id', memberId);
+        const { error: attendanceError } = await supabase
+          .from('class_attendance')
+          .delete()
+          .eq('family_member_id', memberId);
 
-      if (attendanceError) throw attendanceError;
+        if (attendanceError) return { error: attendanceError };
 
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('family_member_id', memberId);
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .delete()
+          .eq('family_member_id', memberId);
 
-      if (paymentError) throw paymentError;
+        if (paymentError) return { error: paymentError };
 
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .delete()
-        .eq('id', memberId);
+        const { error: memberError } = await supabase
+          .from('family_members')
+          .delete()
+          .eq('id', memberId);
 
-      if (memberError) throw memberError;
-
-      await get().fetchAllFamilyMembers();
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+        return { error: memberError };
+      },
+      onSuccess: async () => {
+        await get().fetchAllFamilyMembers();
+      },
+    }, set, get)();
   },
 
   addAttendance: async (attendance) => {
-    try {
-      set({ loading: true, error: null });
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('class_attendance')
-        .insert([{ ...attendance, user_id: user.id }]);
-
-      if (error) throw error;
-
-      if (attendance.family_member_id) {
-        await get().fetchAttendanceForMember(attendance.family_member_id);
-      }
-    } catch (error) {
-      set({ error: (error as Error).message });
-    } finally {
-      set({ loading: false });
+    set({ error: null });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      set({ error: 'Not authenticated' });
+      return;
     }
+
+    await createOptimisticAddition<RecurStore, ClassAttendance>({
+      stateKey: 'attendance',
+      item: { ...attendance, user_id: user.id } as ClassAttendance,
+      apiCall: async () => {
+        const { data, error } = await supabase
+          .from('class_attendance')
+          .insert([{ ...attendance, user_id: user.id }])
+          .select()
+          .single();
+        return { data, error };
+      },
+      onSuccess: async () => {
+        if (attendance.family_member_id) {
+          await get().fetchAttendanceForMember(attendance.family_member_id);
+        }
+      },
+    }, set, get)();
   },
 
   addPayment: async (payment) => {
-    try {
-      set({ loading: true, error: null });
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('payments')
-        .insert([{ ...payment, user_id: user.id }]);
-
-      if (error) throw error;
-
-      if (payment.family_member_id) {
-        await get().fetchPaymentsForMember(payment.family_member_id);
-      }
-    } catch (error) {
-      set({ error: (error as Error).message });
-    } finally {
-      set({ loading: false });
+    set({ error: null });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      set({ error: 'Not authenticated' });
+      return;
     }
+
+    await createOptimisticAddition<RecurStore, Payment>({
+      stateKey: 'payments',
+      item: { ...payment, user_id: user.id } as Payment,
+      apiCall: async () => {
+        const { data, error } = await supabase
+          .from('payments')
+          .insert([{ ...payment, user_id: user.id }])
+          .select()
+          .single();
+        return { data, error };
+      },
+      onSuccess: async () => {
+        if (payment.family_member_id) {
+          await get().fetchPaymentsForMember(payment.family_member_id);
+        }
+      },
+    }, set, get)();
   },
 
   recordPayment: async (payment) => {
-    try {
-      set({ loading: true, error: null });
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('payments')
-        .insert([{ ...payment, user_id: user.id }]);
-
-      if (error) throw error;
-
-      if (payment.family_member_id) {
-        await get().fetchPaymentsForMember(payment.family_member_id);
-      }
-
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+    set({ error: null });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      set({ error: 'Not authenticated' });
       return false;
     }
+
+    const result = await createOptimisticAddition<RecurStore, Payment>({
+      stateKey: 'payments',
+      item: { ...payment, user_id: user.id } as Payment,
+      apiCall: async () => {
+        const { data, error } = await supabase
+          .from('payments')
+          .insert([{ ...payment, user_id: user.id }])
+          .select()
+          .single();
+        return { data, error };
+      },
+      onSuccess: async () => {
+        if (payment.family_member_id) {
+          await get().fetchPaymentsForMember(payment.family_member_id);
+        }
+      },
+    }, set, get)();
+
+    return result !== null;
   },
 
   updatePayment: async (paymentId: string, payment: Partial<Omit<Payment, 'id' | 'created_at'>>) => {
-    try {
-      set({ loading: true, error: null });
-      const { error } = await supabase
-        .from('payments')
-        .update(payment)
-        .eq('id', paymentId);
+    set({ error: null });
 
-      if (error) throw error;
-
-      if (payment.family_member_id) {
-        await get().fetchPaymentsForMember(payment.family_member_id);
-      }
-
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+    return createOptimisticUpdate<RecurStore, Payment>({
+      stateKey: 'payments',
+      itemId: paymentId,
+      updates: payment,
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('payments')
+          .update(payment)
+          .eq('id', paymentId);
+        return { error };
+      },
+      onSuccess: async () => {
+        if (payment.family_member_id) {
+          await get().fetchPaymentsForMember(payment.family_member_id);
+        }
+      },
+    }, set, get)();
   },
 
   deletePayment: async (paymentId: string) => {
-    try {
-      set({ loading: true, error: null });
-      const { error } = await supabase
-        .from('payments')
-        .delete()
-        .eq('id', paymentId);
+    set({ error: null });
 
-      if (error) throw error;
-
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+    return createOptimisticDeletion<RecurStore>({
+      stateKey: 'payments',
+      itemId: paymentId,
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('payments')
+          .delete()
+          .eq('id', paymentId);
+        return { error };
+      },
+    }, set, get)();
   },
 
   subscribeToClass: async (memberId: string, classId: string) => {
@@ -586,100 +604,104 @@ export const useRecur = create<RecurStore>((set, get) => ({
   },
 
   deleteAttendance: async (attendanceId: string) => {
-    try {
-      set({ loading: true, error: null });
-      const { error } = await supabase
-        .from('class_attendance')
-        .delete()
-        .eq('id', attendanceId);
+    set({ error: null });
 
-      if (error) throw error;
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+    return createOptimisticDeletion<RecurStore>({
+      stateKey: 'attendance',
+      itemId: attendanceId,
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('class_attendance')
+          .delete()
+          .eq('id', attendanceId);
+        return { error };
+      },
+    }, set, get)();
   },
 
   addClass: async (classData) => {
-    try {
-      set({ loading: true, error: null });
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('classes')
-        .insert([{ ...classData, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      await get().fetchClasses();
-      set({ loading: false });
-      return data.id;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+    set({ error: null });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      set({ error: 'Not authenticated' });
       return null;
     }
+
+    return createOptimisticAddition<RecurStore, ClassWithDetails>({
+      stateKey: 'classes',
+      item: { ...classData, user_id: user.id } as ClassWithDetails,
+      apiCall: async () => {
+        const { data, error } = await supabase
+          .from('classes')
+          .insert([{ ...classData, user_id: user.id }])
+          .select()
+          .single();
+        return { data, error };
+      },
+      onSuccess: async () => {
+        await get().fetchClasses();
+      },
+    }, set, get)();
   },
 
   updateClass: async (classId: string, classData: Partial<Class>) => {
-    try {
-      set({ loading: true, error: null });
-      const { error } = await supabase
-        .from('classes')
-        .update(classData)
-        .eq('id', classId);
+    set({ error: null });
 
-      if (error) throw error;
-      await get().fetchClasses();
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+    return createOptimisticUpdate<RecurStore, ClassWithDetails>({
+      stateKey: 'classes',
+      itemId: classId,
+      updates: classData,
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('classes')
+          .update(classData)
+          .eq('id', classId);
+        return { error };
+      },
+      onSuccess: async () => {
+        await get().fetchClasses();
+      },
+    }, set, get)();
   },
 
   deleteClass: async (classId: string) => {
-    try {
-      set({ loading: true, error: null });
+    set({ error: null });
 
-      const { error: subscriptionError } = await supabase
-        .from('class_subscriptions')
-        .delete()
-        .eq('class_id', classId);
+    return createOptimisticDeletion<RecurStore>({
+      stateKey: 'classes',
+      itemId: classId,
+      apiCall: async () => {
+        const { error: subscriptionError } = await supabase
+          .from('class_subscriptions')
+          .delete()
+          .eq('class_id', classId);
 
-      if (subscriptionError) throw subscriptionError;
+        if (subscriptionError) return { error: subscriptionError };
 
-      const { error: attendanceError } = await supabase
-        .from('class_attendance')
-        .delete()
-        .eq('class_id', classId);
+        const { error: attendanceError } = await supabase
+          .from('class_attendance')
+          .delete()
+          .eq('class_id', classId);
 
-      if (attendanceError) throw attendanceError;
+        if (attendanceError) return { error: attendanceError };
 
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('class_id', classId);
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .delete()
+          .eq('class_id', classId);
 
-      if (paymentError) throw paymentError;
+        if (paymentError) return { error: paymentError };
 
-      const { error: classError } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', classId);
+        const { error: classError } = await supabase
+          .from('classes')
+          .delete()
+          .eq('id', classId);
 
-      if (classError) throw classError;
-
-      await get().fetchClasses();
-      set({ loading: false });
-      return true;
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false });
-      return false;
-    }
+        return { error: classError };
+      },
+      onSuccess: async () => {
+        await get().fetchClasses();
+      },
+    }, set, get)();
   },
 }));
