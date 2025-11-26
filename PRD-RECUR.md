@@ -1,4 +1,3 @@
-testing sync 11:30 11/26
 ---
 title: Recur - Recurring Class Management System
 version: 1.0.0
