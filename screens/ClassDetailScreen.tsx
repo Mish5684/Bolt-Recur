@@ -295,7 +295,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
           <View style={styles.infoTilesContainer}>
             <View style={styles.infoTilesRow}>
               <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>This Year</Text>
+                <Text style={styles.infoTileLabel}>Attended This Year</Text>
                 <Text
                   style={styles.infoTileValue}
                   adjustsFontSizeToFit
@@ -306,7 +306,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
                 </Text>
               </View>
               <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>This Month</Text>
+                <Text style={styles.infoTileLabel}>Attended This Month</Text>
                 <Text
                   style={styles.infoTileValue}
                   adjustsFontSizeToFit
@@ -317,7 +317,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
                 </Text>
               </View>
               <View style={styles.infoTile}>
-                <Text style={styles.infoTileLabel}>Remaining</Text>
+                <Text style={styles.infoTileLabel}>Classes Remaining</Text>
                 <Text
                   style={[styles.infoTileValue, metrics.remaining <= 0 && styles.warningText]}
                   adjustsFontSizeToFit
