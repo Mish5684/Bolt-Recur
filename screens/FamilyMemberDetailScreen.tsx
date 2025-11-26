@@ -8,11 +8,12 @@ import {
   RefreshControl,
   FlatList,
   SafeAreaView,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRecur } from '../shared/stores/recur';
 import { ClassWithDetails } from '../shared/types/database';
-import ClassLocationsMap from '../components/ClassLocationsMap';
 
 export default function FamilyMemberDetailScreen({ route, navigation }: any) {
   const { memberId } = route.params;
@@ -106,6 +107,18 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
     return `${displayHour}:${minutes} ${period}`;
   };
 
+  const openMap = (latitude: number, longitude: number, address?: string) => {
+    const label = address || 'Class Location';
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${latitude},${longitude}`,
+      android: `geo:0,0?q=${latitude},${longitude}(${label})`,
+    });
+
+    if (url) {
+      Linking.openURL(url);
+    }
+  };
+
   const renderClassCard = ({ item }: { item: ClassWithDetails }) => {
     const stats = getClassStats(item.id);
     const nextClass = getNextClassDate(item);
@@ -153,6 +166,18 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
         {item.type && <Text style={styles.classType}>{item.type}</Text>}
         {item.instructor && (
           <Text style={styles.instructor}>👨‍🏫 {item.instructor}</Text>
+        )}
+
+        {item.latitude && item.longitude && (
+          <TouchableOpacity
+            style={styles.locationBadge}
+            onPress={(e) => {
+              e.stopPropagation();
+              openMap(item.latitude!, item.longitude!, item.address);
+            }}
+          >
+            <Text style={styles.locationBadgeText}>📍 {item.address || 'View Location'}</Text>
+          </TouchableOpacity>
         )}
 
         {nextClass && (
@@ -211,13 +236,6 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
       >
         <Text style={styles.addClassText}>+ Add Class</Text>
       </TouchableOpacity>
-
-      <ClassLocationsMap
-        classes={memberClasses}
-        onMarkerPress={(classId) =>
-          navigation.navigate('ClassDetail', { memberId, classId })
-        }
-      />
 
       <Text style={styles.sectionTitle}>Classes</Text>
     </>
@@ -443,7 +461,21 @@ const styles = StyleSheet.create({
   instructor: {
     fontSize: 14,
     color: '#6B7280',
+    marginBottom: 8,
+  },
+  locationBadge: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  locationBadgeText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
   },
   nextClassContainer: {
     backgroundColor: '#EFF6FF',
