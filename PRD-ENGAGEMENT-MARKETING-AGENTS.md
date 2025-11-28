@@ -530,6 +530,29 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 
   // Day 7: Progress check + encourage attendance tracking
   if (daysSinceInstall === 7) {
+    // Fallback: If still no family member, remind them
+    if (progress.family_members === 0) {
+      return {
+        action: 'send_notification',
+        message: generateMessage(`day7_still_no_member_variant_${messageVariant}`, user),
+        deepLink: 'recur://add-family-member',
+        priority: 'medium',
+        metadata: { variant: messageVariant, fallback: true }
+      };
+    }
+
+    // Fallback: If no class added yet, nudge them
+    if (progress.classes === 0) {
+      return {
+        action: 'send_notification',
+        message: generateMessage(`day7_still_no_class_variant_${messageVariant}`, user, progress),
+        deepLink: 'recur://add-class',
+        priority: 'medium',
+        metadata: { variant: messageVariant, fallback: true }
+      };
+    }
+
+    // Normal path: Has member + class, encourage attendance
     if (progress.attendance_count < 5) {
       return {
         action: 'send_notification',
@@ -542,6 +565,29 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 
   // Day 14: Final push OR celebration
   if (daysSinceInstall === 14) {
+    // Fallback: If STILL no family member after 14 days, last attempt
+    if (progress.family_members === 0) {
+      return {
+        action: 'send_notification',
+        message: generateMessage(`day14_last_chance_member_variant_${messageVariant}`, user),
+        deepLink: 'recur://add-family-member',
+        priority: 'low',
+        metadata: { variant: messageVariant, fallback: true, lastChance: true }
+      };
+    }
+
+    // Fallback: If no class after 14 days, final nudge
+    if (progress.classes === 0) {
+      return {
+        action: 'send_notification',
+        message: generateMessage(`day14_last_chance_class_variant_${messageVariant}`, user, progress),
+        deepLink: 'recur://add-class',
+        priority: 'low',
+        metadata: { variant: messageVariant, fallback: true, lastChance: true }
+      };
+    }
+
+    // Standard path: Has setup but low attendance
     if (progress.attendance_count < 5) {
       return {
         action: 'send_notification',
@@ -611,6 +657,64 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 | Variant | Title | Body | Angle |
 |---------|-------|------|-------|
 | ALL | "You're crushing it! 🎉" | "{X} classes tracked in 2 weeks. Check out how much you're saving per class." | Celebration + value |
+
+---
+
+**Fallback Messages (for users who skip earlier steps):**
+
+**Day 7 - Still No Family Member**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - FOMO | "You're missing out" | "Join parents who've saved 3+ hours with Recur. Add your first family member in 30 seconds." | Social pressure |
+| 1 - Direct Value | "Get organized in 30 seconds" | "One week in, still using spreadsheets? Add your first family member and feel the difference." | Time contrast |
+| 2 - Simplicity | "It's easier than you think" | "Just name, age, and you're done. Start tracking your first family member's classes." | Low barrier |
+
+**Day 7 - Still No Class**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Next Step | "One more step" | "Great start! Add {MemberName}'s first class to unlock attendance tracking and insights." | Progress momentum |
+| 1 - Value Unlock | "See your real costs" | "Add a class for {MemberName} to discover your true cost per session. Takes 45 seconds." | ROI curiosity |
+| 2 - Friendly Push | "Ready when you are" | "{MemberName} is set up. Add their class and start tracking today!" | Encouraging |
+
+**Day 14 - Last Chance (No Family Member)**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Soft Urgency | "Still here for you" | "Two weeks in—give Recur a real try. Add your first family member and see what you've been missing." | FOMO + support |
+| 1 - Direct Ask | "Give us one more shot?" | "We know onboarding can slip. Take 30 seconds now to add your first family member." | Honesty |
+| 2 - Value Reminder | "This is what you're missing" | "Cost tracking, attendance insights, payment reminders—all in 30 seconds. Add your family member." | Feature stack |
+
+**Day 14 - Last Chance (No Class)**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Almost There | "You're so close" | "{MemberName} is ready. Add their first class to unlock your full Recur experience." | Near completion |
+| 1 - Fresh Start | "Not too late" | "Two weeks to try it? Add {MemberName}'s class now and see why parents love Recur." | New beginning |
+| 2 - Final Push | "Last step" | "You've set up {MemberName}. Add one class to see attendance trends, cost insights, and more." | Feature payoff |
+
+---
+
+**Onboarding Flow Logic:**
+
+```
+Day 1:  No member? → Send Day 1 variant (add member)
+        ↓
+Day 3:  No member? → Send Day 3 variant (add member)
+        Has member, no class? → Send Day 3 class variant
+        ↓
+Day 7:  No member? → Send Day 7 FALLBACK (still no member)
+        Has member, no class? → Send Day 7 FALLBACK (still no class)
+        Has member + class, low attendance? → Send Day 7 normal (mark attendance)
+        ↓
+Day 14: No member? → Send Day 14 LAST CHANCE (member)
+        Has member, no class? → Send Day 14 LAST CHANCE (class)
+        Has member + class, low attendance? → Send Day 14 final push
+        Has member + class + 5+ attendance? → Send Day 14 celebration 🎉
+```
+
+**Key Innovation:** Fallback messages ensure no user gets irrelevant notifications. The system adapts to their actual progress, not assumed progress.
 
 ---
 
