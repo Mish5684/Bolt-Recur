@@ -648,9 +648,9 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 
 | Variant | Title | Body | Angle |
 |---------|-------|------|-------|
-| 0 - Progress Bar | "Get the full picture" | "You're {X}% there! Track a few more sessions to unlock insights on your class spending." | Gamification |
-| 1 - Near Win | "So close!" | "Just {Y} more sessions to see your full attendance analytics. You've got this!" | Encouragement |
-| 2 - Value Tease | "Unlock premium insights" | "Track {Y} more sessions to see cost-per-class, attendance streaks, and spending trends." | Feature reveal |
+| 0 - Concrete Action | "Complete your setup" | "Mark attendance for your {ClassCount} class(es) to unlock spending insights and trends." | Clear directive |
+| 1 - Value Focus | "See what you're spending" | "Track a few sessions and discover your true cost per class. Knowledge is power!" | ROI promise |
+| 2 - Gentle Push | "You're doing great" | "Keep going! Track {ClassCount} sessions this week to see your attendance analytics." | Encouragement + specific |
 
 **Day 14 - Complete (Reached 1-1-5)**
 
