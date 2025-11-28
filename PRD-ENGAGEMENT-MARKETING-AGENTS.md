@@ -141,7 +141,7 @@ const classes = await supabase
 
 **Agent 3: Gather More Info Agent**
 - Only evaluates active classes created in last 30 days
-- Paused classes are excluded from "add schedule" nudges
+- Paused classes are excluded from "add schedule" and "record payment" nudges
 
 **Agent 4: Engage Agent**
 - Only checks scheduled times for active classes
@@ -422,9 +422,9 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 
 ### Agent 3: Gather More Info Agent
 
-**Mission:** Help users complete class setup (focus on schedule only)
+**Mission:** Help users complete class setup (schedule and payment tracking)
 
-**Target:** Users with recent classes (< 30 days old) missing schedule
+**Target:** Users with recent classes (< 30 days old) missing schedule OR payment records
 
 **Execution Schedule:** Every 10 days at 12 PM
 
@@ -448,14 +448,21 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
     if (daysSinceCreated > 30) continue;
 
     const hasSchedule = classItem.schedule && classItem.schedule.length > 0;
+    const paymentCount = await getPaymentCount(classItem.id);
 
-    if (!hasSchedule) {
-      incompleteClasses.push(classItem);
+    if (!hasSchedule || paymentCount === 0) {
+      incompleteClasses.push({
+        class: classItem,
+        missing: {
+          schedule: !hasSchedule,
+          payment: paymentCount === 0
+        }
+      });
     }
   }
 
   if (incompleteClasses.length === 0) {
-    return { action: 'skip', reason: 'All active classes have schedules' };
+    return { action: 'skip', reason: 'All active classes have complete setup' };
   }
 
   // Check notification frequency (max 1 per 10 days)
@@ -469,23 +476,39 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
   // Pick the first incomplete class
   const targetClass = incompleteClasses[0];
 
-  return {
-    action: 'send_notification',
-    message: {
-      title: `Never miss ${targetClass.name} again`,
-      body: "Add a schedule and we'll remind you before each session."
-    },
-    deepLink: `recur://class/${targetClass.id}/edit`,
-    priority: 'medium'
-  };
+  // Prioritize: schedule > payment
+  if (targetClass.missing.schedule) {
+    return {
+      action: 'send_notification',
+      message: {
+        title: `Never miss ${targetClass.class.name} again`,
+        body: "Add a schedule and we'll remind you before each session."
+      },
+      deepLink: `recur://class/${targetClass.class.id}/edit`,
+      priority: 'medium'
+    };
+  } else if (targetClass.missing.payment) {
+    return {
+      action: 'send_notification',
+      message: {
+        title: `Track ${targetClass.class.name} spending`,
+        body: "Record your payment to see your actual cost per class. Takes 20 seconds."
+      },
+      deepLink: `recur://class/${targetClass.class.id}/record-payment`,
+      priority: 'medium'
+    };
+  }
+
+  return { action: 'skip', reason: 'No incomplete classes' };
 }
 ```
 
-**Notification Message:**
+**Notification Messages:**
 
 | Trigger | Title | Body | Deep Link |
 |---------|-------|------|-----------|
 | Active class missing schedule | "Never miss {ClassName} again" | "Add a schedule and we'll remind you before each session." | `class/{id}/edit` |
+| Active class missing payment | "Track {ClassName} spending" | "Record your payment to see your actual cost per class. Takes 20 seconds." | `class/{id}/record-payment` |
 
 ---
 
