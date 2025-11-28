@@ -316,7 +316,7 @@ Users are dynamically assigned to cohorts based on their current state. A user c
 **Definition:** User has at least 1 class added in last 30 days but incomplete setup
 
 **Criteria:**
-- Has at least 1 class where `created_at` ≥ 30 days ago (class is still "recent")
+- Has at least 1 class where `created_at` ≤ 30 days ago (class is still "recent")
 - AND for that class, any of:
   - `schedule` is NULL or empty array
   - No payments recorded (count from `payments` table)
@@ -324,7 +324,7 @@ Users are dynamically assigned to cohorts based on their current state. A user c
 
 **Goal:** Complete class setup (add schedule, record payment, mark attendance)
 
-**Graduation:** Class has schedule + at least 1 payment + at least 3 attendance records
+**Graduation:** Class has schedule + at least 1 payment + at least 5 attendance records
 
 ---
 
@@ -332,10 +332,10 @@ Users are dynamically assigned to cohorts based on their current state. A user c
 **Definition:** User has at least 1 class added in last 30 days with active engagement
 
 **Criteria:**
-- Has at least 1 class where `created_at` ≥ 30 days ago
+- Has at least 1 class where `created_at` ≤ 30 days ago (class is still "recent")
 - AND that class has:
   - Schedule is set (`schedule` array has ≥ 1 item)
-  - At least 3 attendance records total
+  - At least 5 attendance records total
 
 **Goal:** Keep user engaged through reminders and celebrations
 
@@ -565,8 +565,8 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 | Day 3 - No family member | "Quick setup!" | "It takes just 30 seconds to add your first family member and start tracking." | `add-family-member` |
 | Day 3 - No class | "Add your first class" | "You're doing great! Now add a class for {MemberName} to track attendance." | `add-class` |
 | Day 7 - Low attendance | "Mark your attendance" | "You've set up {ClassCount} class(es)! Mark attendance to see your progress." | `home` |
-| Day 14 - Incomplete | "Don't lose track!" | "You're {X}% there! Just {Y} more attendance records to complete your setup." | `home` |
-| Day 14 - Complete | "You're all set! 🎉" | "You've tracked {X} classes in 2 weeks! Check out your analytics." | `analytics` |
+| Day 14 - Incomplete | "Don't lose track!" | "You're almost there! Add more classes and bring your attendance up to date to stay in your rhythm" | `home` |
+| Day 14 - Complete | "You're all set! 🎉" | "You've tracked {X} classes in 2 weeks! Check out your Class Insights." | `analytics` |
 
 ---
 
