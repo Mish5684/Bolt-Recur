@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import { FamilyMember, Payment, ClassAttendance, Class, ClassSubscription, ClassWithDetails } from '../types/database';
 import { createOptimisticAddition, createOptimisticDeletion, createOptimisticUpdate } from '../utils/optimisticHelpers';
+import { trackActivity } from '../utils/agentHelpers';
 
 interface CostPerClass {
   classId: string;
@@ -397,8 +398,16 @@ export const useRecur = create<RecurStore>((set, get) => ({
           .single();
         return { data, error };
       },
-      onSuccess: async () => {
+      onSuccess: async (memberId) => {
         await get().fetchAllFamilyMembers();
+        // Track activity for agents
+        if (user) {
+          await trackActivity(user.id, 'family_member_added', {
+            family_member_id: memberId,
+            name: member.name,
+            relation: member.relation
+          });
+        }
       },
     }, set, get)();
   },
@@ -483,9 +492,18 @@ export const useRecur = create<RecurStore>((set, get) => ({
           .single();
         return { data, error };
       },
-      onSuccess: async () => {
+      onSuccess: async (attendanceId) => {
         if (attendance.family_member_id) {
           await get().fetchAttendanceForMember(attendance.family_member_id);
+        }
+        // Track activity for agents
+        if (user) {
+          await trackActivity(user.id, 'attendance_marked', {
+            attendance_id: attendanceId,
+            family_member_id: attendance.family_member_id,
+            class_id: attendance.class_id,
+            class_date: attendance.class_date
+          });
         }
       },
     }, set, get)();
@@ -537,9 +555,19 @@ export const useRecur = create<RecurStore>((set, get) => ({
           .single();
         return { data, error };
       },
-      onSuccess: async () => {
+      onSuccess: async (paymentId) => {
         if (payment.family_member_id) {
           await get().fetchPaymentsForMember(payment.family_member_id);
+        }
+        // Track activity for agents
+        if (user) {
+          await trackActivity(user.id, 'payment_recorded', {
+            payment_id: paymentId,
+            family_member_id: payment.family_member_id,
+            class_id: payment.class_id,
+            amount: payment.amount,
+            classes_paid: payment.classes_paid
+          });
         }
       },
     }, set, get)();
@@ -640,8 +668,16 @@ export const useRecur = create<RecurStore>((set, get) => ({
           .single();
         return { data, error };
       },
-      onSuccess: async () => {
+      onSuccess: async (classId) => {
         await get().fetchClasses();
+        // Track activity for agents
+        if (user) {
+          await trackActivity(user.id, 'class_added', {
+            class_id: classId,
+            name: classData.name,
+            type: classData.type
+          });
+        }
       },
     }, set, get)();
   },
