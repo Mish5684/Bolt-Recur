@@ -274,7 +274,7 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
         action: 'send_notification',
         message: {
           title: "Your classes, organized",
-          body: "Stop losing track of schedules and payments. Add your first family member in 30 seconds."
+          body: "Stop losing track of schedules and payments. In just 30 seconds, add your first family member and start tracking!"
         },
         deepLink: 'recur://add-family-member',
         priority: 'medium'
@@ -309,7 +309,7 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
         action: 'send_notification',
         message: {
           title: "Give Recur a try",
-          body: "One week in—add your first family member and see what you've been missing."
+          body: "Add your first family member and start tracking your recurring classes and payments!"
         },
         deepLink: 'recur://add-family-member',
         priority: 'low'
@@ -340,7 +340,7 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
         action: 'send_notification',
         message: {
           title: "You're all set! 🎉",
-          body: `${progress.attendance_count} sessions tracked. Check out your cost per class.`
+          body: `${progress.attendance_count} sessions tracked in one week! Check out your cost per class.`
         },
         deepLink: 'recur://analytics',
         priority: 'low'
