@@ -25,9 +25,9 @@ A simplified, rule-based notification system that sends **gentle nudges** to hel
 ### Goals
 
 - Drive new users to "1-1-5" activation (1 family member, 1 class, 5 attendance records) within 14 days
-- Help users complete class setup (schedule)
-- Remind users to mark attendance after scheduled classes
-- Alert users to low prepaid balance
+- Help users complete class setup (schedule and payment tracking)
+- Remind users before and after scheduled classes
+- Alert users to low prepaid balance (only for classes with payment tracking)
 
 ### Success Metrics
 
@@ -149,8 +149,9 @@ const classes = await supabase
 - Weekly summary includes only active class attendance
 
 **Agent 5: Alert Agent**
-- Only calculates prepaid balance for active classes
-- Paused classes don't trigger low balance alerts
+- Only sends pre-class reminders for active scheduled classes
+- Only calculates prepaid balance for active classes with payment records
+- Paused classes don't trigger any alerts (balance or pre-class reminders)
 
 ### Decision Tree: Check Pause State First
 
@@ -608,16 +609,16 @@ async function evaluateUser(userId: string, evaluationTime: Date): Promise<Agent
 
 ### Agent 5: Alert Agent
 
-**Mission:** Notify users of important account states (low prepaid balance only)
+**Mission:** Alert users about low prepaid balance and upcoming scheduled classes
 
-**Target:** All users with active classes
+**Target:** All users with active classes that have payment records AND/OR schedules
 
-**Execution Schedule:** Daily at 9 AM
+**Execution Schedule:** Runs hourly to check for upcoming classes; low balance checked daily at 9 AM
 
 **Decision Logic:**
 
 ```typescript
-async function evaluateUser(userId: string): Promise<AgentDecision> {
+async function evaluateUser(userId: string, evaluationTime: Date): Promise<AgentDecision> {
   // Fetch ONLY ACTIVE classes
   const classes = await supabase
     .from('classes')
@@ -631,32 +632,101 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 
   const alerts: AgentDecision[] = [];
 
-  // Check each active class for low balance
+  // PRIORITY 1: Pre-class reminders (2 hours before scheduled class)
+  // Handles DnD rules: Classes before 10 AM get alert at 9 PM prior day
   for (const classItem of classes.data) {
-    const balance = await getPrepaidBalance(classItem.id);
+    const hasSchedule = classItem.schedule && classItem.schedule.length > 0;
+    if (!hasSchedule) continue;
 
-    // Alert if low balance (< 3 classes remaining, >= 0)
-    if (balance.remaining < 3 && balance.remaining >= 0) {
-      const lastAlert = await getLastNotificationForAgent(userId, 'low_balance_alert', classItem.id);
-      const daysSinceLastAlert = lastAlert ? getDaysSince(lastAlert.sent_at) : 999;
+    const nextScheduledTime = getNextScheduledTime(classItem.schedule, evaluationTime);
+    if (!nextScheduledTime) continue;
 
-      // Send once when hitting threshold, then stop
-      if (!lastAlert) {
+    const hoursUntilClass = getHoursUntil(evaluationTime, nextScheduledTime);
+    const classHour = nextScheduledTime.getHours();
+
+    // Calculate ideal alert time based on DnD rules
+    let shouldSendAlert = false;
+
+    if (classHour < 10) {
+      // Classes before 10 AM: Send alert at 9 PM the prior day
+      const currentHour = evaluationTime.getHours();
+      const isPriorDay = evaluationTime.getDate() !== nextScheduledTime.getDate();
+
+      if (isPriorDay && currentHour === 21) {
+        // It's 9 PM the day before an early class
+        shouldSendAlert = true;
+      }
+    } else {
+      // Classes at 10 AM or later: Send alert 2 hours before
+      if (hoursUntilClass >= 2 && hoursUntilClass < 3) {
+        shouldSendAlert = true;
+      }
+    }
+
+    if (shouldSendAlert) {
+      const alreadyNotified = await checkRecentNotification(
+        userId,
+        'pre_class_alert',
+        classItem.id,
+        24 // Don't send if already notified in last 24 hours
+      );
+
+      if (!alreadyNotified) {
+        const timeDisplay = formatTime(nextScheduledTime); // e.g., "3:00 PM"
+
         alerts.push({
           action: 'send_notification',
           message: {
-            title: `Low balance: ${classItem.name}`,
-            body: `You have ${balance.remaining} prepaid classes left for ${classItem.name}. Record your next payment?`
+            title: `${classItem.name} ${classHour < 10 ? 'tomorrow' : 'today'}`,
+            body: `Your class is at ${timeDisplay}. Don't forget to attend!`
           },
-          deepLink: `recur://class/${classItem.id}/record-payment`,
+          deepLink: `recur://class/${classItem.id}`,
           priority: 'high',
-          metadata: { class_id: classItem.id }
+          metadata: { class_id: classItem.id, scheduled_time: nextScheduledTime.toISOString() }
         });
       }
     }
   }
 
-  // Return first alert if any
+  // PRIORITY 2: Low balance alerts (only for classes with payment records)
+  // Run daily at 9 AM
+  const currentHour = evaluationTime.getHours();
+
+  if (currentHour === 9) {
+    for (const classItem of classes.data) {
+      const paymentCount = await getPaymentCount(classItem.id);
+
+      // Only alert if class has payment records (user is tracking payments)
+      if (paymentCount === 0) continue;
+
+      const balance = await getPrepaidBalance(classItem.id);
+
+      // Low balance definition: < 3 classes remaining
+      if (balance.remaining < 3 && balance.remaining >= 0) {
+        const lastAlert = await getLastNotificationForAgent(
+          userId,
+          'low_balance_alert',
+          classItem.id
+        );
+
+        // Send once when hitting threshold, don't repeat
+        if (!lastAlert) {
+          alerts.push({
+            action: 'send_notification',
+            message: {
+              title: `Low balance: ${classItem.name}`,
+              body: `Only ${balance.remaining} prepaid ${balance.remaining === 1 ? 'class' : 'classes'} left. Record your next payment?`
+            },
+            deepLink: `recur://class/${classItem.id}/record-payment`,
+            priority: 'high',
+            metadata: { class_id: classItem.id, balance_remaining: balance.remaining }
+          });
+        }
+      }
+    }
+  }
+
+  // Return first alert if any (pre-class has priority over low balance)
   if (alerts.length === 0) {
     return { action: 'skip', reason: 'No alerts needed' };
   }
@@ -665,11 +735,19 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 }
 ```
 
-**Notification Message:**
+**Notification Messages:**
 
 | Trigger | Title | Body | Deep Link |
 |---------|-------|------|-----------|
-| Active class balance < 3 | "Low balance: {ClassName}" | "You have {X} prepaid classes left for {ClassName}. Record your next payment?" | `class/{id}/record-payment` |
+| 2hr before class (or 9 PM prior day if before 10 AM) | "{ClassName} {today/tomorrow}" | "Your class is at {time}. Don't forget to attend!" | `class/{id}` |
+| Active class with payments, balance < 3 | "Low balance: {ClassName}" | "Only {X} prepaid class(es) left. Record your next payment?" | `class/{id}/record-payment` |
+
+**Low Balance Definition:** Less than 3 prepaid classes remaining
+
+**DnD Rule for Pre-Class Alerts:**
+- Classes scheduled at **10 AM or later** → Alert sent **2 hours before** (same day)
+- Classes scheduled **before 10 AM** → Alert sent at **9 PM the prior day**
+- This ensures no alerts are sent during quiet hours (10 PM - 8 AM)
 
 ---
 
@@ -996,11 +1074,12 @@ CREATE POLICY "Service role can manage agent decisions"
 **Goal:** Complete MVP agent suite
 
 1. Implement Never Tried Agent (dormant user reactivation)
-2. Implement Gather More Info Agent (add schedule nudges)
-3. Test full agent priority system
-4. Add observability dashboard (notification stats)
+2. Implement Gather More Info Agent (add schedule + payment tracking nudges)
+3. Add pre-class reminders with DnD rule handling to Alert Agent
+4. Test full agent priority system
+5. Add observability dashboard (notification stats)
 
-**Deliverable:** All 4 agents running in production with monitoring
+**Deliverable:** All 5 agents running in production with monitoring
 
 ---
 
@@ -1038,19 +1117,25 @@ CREATE POLICY "Service role can manage agent decisions"
 
 ## Summary
 
-This simplified MVP focuses on **4 gentle agents** that respect user attention and automatically exclude paused classes:
+This simplified MVP focuses on **5 focused agents** that respect user attention and automatically exclude paused classes:
 
 1. **Onboarding Agent** - Guide new users to first value (Day 3 & 7)
 2. **Never Tried Agent** - Reactivate dormant installers (every 7 days)
-3. **Gather More Info Agent** - Nudge to add schedule (every 10 days)
+3. **Gather More Info Agent** - Nudge to add schedule + payment tracking (every 10 days)
 4. **Engage Agent** - Post-class reminders + weekly summary
-5. **Alert Agent** - Low balance warning (once per threshold hit)
+5. **Alert Agent** - Pre-class reminders (2hr before, DnD-aware) + low balance warnings (< 3 classes)
 
-**Key Simplifications:**
-- No A/B testing (single message per trigger)
-- Longer notification intervals (gentler pace)
-- Pause-aware by default (universal status filter)
-- Max 1 notification/day (respect user attention)
-- Focus on helpful reminders, not marketing
+**Key Features:**
+- **Pre-class reminders** with smart DnD handling (9 PM prior day for early classes)
+- **Low balance alerts** only for classes with payment tracking
+- **Payment tracking nudges** to help users see cost per class
+- **Pause-aware by default** - universal status filter on all agents
+- **Max 1 notification/day** - respect user attention
+- **No A/B testing** - single message per trigger
+
+**DnD Rule Implementation:**
+- Classes before 10 AM → Alert at 9 PM prior day
+- Classes at 10 AM+ → Alert 2 hours before
+- No notifications 10 PM - 8 AM
 
 **Implementation Timeline:** 6 weeks from foundation to full MVP with monitoring.
