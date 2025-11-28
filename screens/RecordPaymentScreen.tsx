@@ -16,10 +16,12 @@ const CURRENCIES = ['INR', 'USD', 'AED', 'EUR', 'GBP', 'SGD'];
 
 export default function RecordPaymentScreen({ route, navigation }: any) {
   const { memberId, classId, paymentId, paymentData } = route.params;
-  const { recordPayment, updatePayment, familyMembers, loading } = useRecur();
+  const { recordPayment, updatePayment, familyMembers, classes, loading } = useRecur();
 
   const member = familyMembers.find((m) => m.id === memberId);
+  const classData = classes.find((c) => c.id === classId);
   const isEditMode = !!paymentId;
+  const isClassPaused = classData?.status === 'paused';
 
   const [amount, setAmount] = useState(paymentData?.amount?.toString() || '');
   const [classesPaid, setClassesPaid] = useState(paymentData?.classes_paid?.toString() || '');
@@ -88,6 +90,14 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
       </View>
 
       <ScrollView style={styles.content}>
+        {isClassPaused && (
+          <View style={styles.infoBanner}>
+            <Text style={styles.infoBannerIcon}>ℹ️</Text>
+            <Text style={styles.infoBannerText}>
+              This class is paused. Recording payment won't resume it.
+            </Text>
+          </View>
+        )}
         <View style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.label}>Amount Paid *</Text>
@@ -253,6 +263,29 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  infoBanner: {
+    backgroundColor: '#EFF6FF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoBannerIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E40AF',
+    lineHeight: 20,
   },
   form: {
     padding: 20,

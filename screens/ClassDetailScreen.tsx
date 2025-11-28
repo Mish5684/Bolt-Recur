@@ -36,6 +36,8 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     deleteAttendance,
     deletePayment,
     deleteClass,
+    pauseClass,
+    resumeClass,
     loading,
   } = useRecur();
   const [attendance, setAttendance] = useState<ClassAttendance[]>([]);
@@ -83,6 +85,44 @@ export default function ClassDetailScreen({ route, navigation }: any) {
 
   const handleEditClass = () => {
     navigation.navigate('EditClass', { classId });
+  };
+
+  const handlePauseClass = () => {
+    Alert.alert(
+      `Pause ${classData?.name}?`,
+      "You'll stop receiving reminders. All your attendance and payment history stays safe.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pause Class',
+          onPress: async () => {
+            const success = await pauseClass(classId);
+            if (success) {
+              await loadData();
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResumeClass = () => {
+    Alert.alert(
+      `Resume ${classData?.name}?`,
+      "You'll start receiving reminders again.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Resume',
+          onPress: async () => {
+            const success = await resumeClass(classId);
+            if (success) {
+              await loadData();
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleDeleteClass = () => {
@@ -239,6 +279,19 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             </View>
           </View>
 
+          {classData.status === 'paused' && (
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>
+                ⏸️ Paused{classData.paused_reason ? ` - ${classData.paused_reason}` : ''}
+              </Text>
+              {classData.paused_at && (
+                <Text style={styles.statusBadgeSubtext}>
+                  Since {format(parseISO(classData.paused_at), 'MMM d, yyyy')}
+                </Text>
+              )}
+            </View>
+          )}
+
           {classData.latitude && classData.longitude && (
             <View style={styles.locationRow}>
               <TouchableOpacity
@@ -358,6 +411,7 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             schedule={classData?.schedule}
             onDeleteAttendance={handleDeleteAttendance}
             onAddAttendance={handleMarkAttendance}
+            classStatus={classData?.status}
           />
 
           <Pressable
@@ -390,12 +444,29 @@ export default function ClassDetailScreen({ route, navigation }: any) {
 
     if (item.type === 'deleteButton') {
       return (
-        <TouchableOpacity
-          style={styles.deleteClassButton}
-          onPress={handleDeleteClass}
-        >
-          <Text style={styles.deleteClassText}>Delete Class</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtonsContainer}>
+          {classData.status === 'active' ? (
+            <TouchableOpacity
+              style={styles.pauseButton}
+              onPress={handlePauseClass}
+            >
+              <Text style={styles.pauseButtonText}>Pause Class</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.resumeButton}
+              onPress={handleResumeClass}
+            >
+              <Text style={styles.resumeButtonText}>Resume Class</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.deleteClassButton}
+            onPress={handleDeleteClass}
+          >
+            <Text style={styles.deleteClassText}>Delete Class</Text>
+          </TouchableOpacity>
+        </View>
       );
     }
 
@@ -514,9 +585,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 4,
   },
-  deleteClassButton: {
+  statusBadge: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  statusBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  statusBadgeSubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 32,
     marginBottom: 40,
+  },
+  pauseButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#6B7280',
+    alignItems: 'center',
+  },
+  pauseButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  resumeButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    alignItems: 'center',
+  },
+  resumeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  deleteClassButton: {
+    flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,

@@ -49,6 +49,8 @@ interface RecurStore {
   addClass: (classData: Omit<Class, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => Promise<string | null>;
   updateClass: (classId: string, classData: Partial<Class>) => Promise<boolean>;
   deleteClass: (classId: string) => Promise<boolean>;
+  pauseClass: (classId: string, reason?: string) => Promise<boolean>;
+  resumeClass: (classId: string) => Promise<boolean>;
 }
 
 export const useRecur = create<RecurStore>((set, get) => ({
@@ -698,6 +700,62 @@ export const useRecur = create<RecurStore>((set, get) => ({
           .eq('id', classId);
 
         return { error: classError };
+      },
+      onSuccess: async () => {
+        await get().fetchClasses();
+      },
+    }, set, get)();
+  },
+
+  pauseClass: async (classId: string, reason?: string) => {
+    set({ error: null });
+
+    return createOptimisticUpdate<RecurStore, ClassWithDetails>({
+      stateKey: 'classes',
+      itemId: classId,
+      updates: {
+        status: 'paused' as const,
+        paused_at: new Date().toISOString(),
+        paused_reason: reason || null,
+      },
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('classes')
+          .update({
+            status: 'paused',
+            paused_at: new Date().toISOString(),
+            paused_reason: reason || null,
+          })
+          .eq('id', classId);
+        return { error };
+      },
+      onSuccess: async () => {
+        await get().fetchClasses();
+      },
+    }, set, get)();
+  },
+
+  resumeClass: async (classId: string) => {
+    set({ error: null });
+
+    return createOptimisticUpdate<RecurStore, ClassWithDetails>({
+      stateKey: 'classes',
+      itemId: classId,
+      updates: {
+        status: 'active' as const,
+        paused_at: null,
+        paused_reason: null,
+      },
+      apiCall: async () => {
+        const { error } = await supabase
+          .from('classes')
+          .update({
+            status: 'active',
+            paused_at: null,
+            paused_reason: null,
+          })
+          .eq('id', classId);
+        return { error };
       },
       onSuccess: async () => {
         await get().fetchClasses();

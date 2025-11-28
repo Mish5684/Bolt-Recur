@@ -23,6 +23,9 @@ export interface Class {
   city?: string;
   country?: string;
   place_id?: string;
+  status: 'active' | 'paused';
+  paused_at?: string;
+  paused_reason?: string;
   created_at: string;
   updated_at: string;
   user_id: string;

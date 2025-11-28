@@ -25,6 +25,7 @@ interface AttendanceCalendarProps {
   schedule?: ScheduleItem[];
   onDeleteAttendance: (attendanceId: string) => void;
   onAddAttendance: (date: Date) => void;
+  classStatus?: 'active' | 'paused';
 }
 
 export default function AttendanceCalendar({
@@ -32,6 +33,7 @@ export default function AttendanceCalendar({
   schedule,
   onDeleteAttendance,
   onAddAttendance,
+  classStatus = 'active',
 }: AttendanceCalendarProps) {
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -76,13 +78,16 @@ export default function AttendanceCalendar({
         ]
       );
     } else {
+      const isPaused = classStatus === 'paused';
       Alert.alert(
-        'Mark Attendance',
-        `Mark attendance for ${format(date, 'MMM d, yyyy')}?`,
+        isPaused ? 'Class is Paused' : 'Mark Attendance',
+        isPaused
+          ? `This class is currently paused.\n\nMark attendance anyway?\n(This won't resume the class)`
+          : `Mark attendance for ${format(date, 'MMM d, yyyy')}?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Mark',
+            text: isPaused ? 'Mark Attendance' : 'Mark',
             onPress: () => onAddAttendance(date),
           },
         ]

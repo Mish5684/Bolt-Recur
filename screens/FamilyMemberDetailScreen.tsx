@@ -17,9 +17,10 @@ import { ClassWithDetails } from '../shared/types/database';
 
 export default function FamilyMemberDetailScreen({ route, navigation }: any) {
   const { memberId } = route.params;
-  const { familyMembers, fetchFamilyMemberClasses, fetchAllFamilyMembers, fetchCostPerClassForMember, loading } = useRecur();
+  const { familyMembers, fetchFamilyMemberClasses, fetchAllFamilyMembers, fetchCostPerClassForMember, resumeClass, loading } = useRecur();
   const [memberClasses, setMemberClasses] = useState<ClassWithDetails[]>([]);
   const [costPerClassData, setCostPerClassData] = useState<{ [classId: string]: any }>({});
+  const [pausedSectionExpanded, setPausedSectionExpanded] = useState(false);
 
   const member = familyMembers.find((m) => m.id === memberId);
 
@@ -119,7 +120,14 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
     }
   };
 
-  const renderClassCard = ({ item }: { item: ClassWithDetails }) => {
+  const handleResumeClass = async (classId: string) => {
+    const success = await resumeClass(classId);
+    if (success) {
+      await loadData();
+    }
+  };
+
+  const renderClassCard = ({ item, isPaused }: { item: ClassWithDetails; isPaused?: boolean }) => {
     const stats = getClassStats(item.id);
     const nextClass = getNextClassDate(item);
     const hasCostData = stats.pricePerClass > 0;
@@ -134,10 +142,20 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
       return symbols[currency] || '$';
     };
 
+    const getDaysSincePaused = () => {
+      if (!item.paused_at) return 0;
+      const pausedDate = new Date(item.paused_at);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - pausedDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    };
+
     return (
       <Pressable
         style={({ pressed }) => [
           styles.classCard,
+          isPaused && styles.classCardPaused,
           pressed && styles.classCardPressed,
         ]}
         onPress={() =>
@@ -149,25 +167,47 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
       >
         <View style={styles.classHeader}>
           <View style={styles.classHeaderLeft}>
-            <Text style={styles.className}>{item.name}</Text>
+            {isPaused && <Text style={styles.pauseIcon}>⏸️ </Text>}
+            <Text style={[styles.className, isPaused && styles.classNamePaused]}>{item.name}</Text>
           </View>
           <View style={styles.classHeaderRight}>
-            {hasCostData && (
+            {hasCostData && !isPaused && (
               <View style={styles.priceBadge}>
                 <Text style={styles.priceText}>
                   {getCurrencySymbol(stats.currency)}{stats.pricePerClass.toFixed(2)}/class
                 </Text>
               </View>
             )}
-            <Text style={styles.chevron}>›</Text>
+            {!isPaused && <Text style={styles.chevron}>›</Text>}
           </View>
         </View>
 
-        {nextClass && (
-          <Text style={styles.nextClassText}>📅 Next: {nextClass}</Text>
+        {isPaused ? (
+          <>
+            <Text style={styles.pausedText}>
+              Paused {getDaysSincePaused()} day{getDaysSincePaused() !== 1 ? 's' : ''} ago
+            </Text>
+            {item.paused_reason && (
+              <Text style={styles.pausedReason}>Reason: {item.paused_reason}</Text>
+            )}
+            <TouchableOpacity
+              style={styles.resumeButtonSmall}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleResumeClass(item.id);
+              }}
+            >
+              <Text style={styles.resumeButtonSmallText}>Resume</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            {nextClass && (
+              <Text style={styles.nextClassText}>📅 Next: {nextClass}</Text>
+            )}
+            <Text style={styles.remainingText}>{stats.remaining} classes remaining</Text>
+          </>
         )}
-
-        <Text style={styles.remainingText}>{stats.remaining} classes remaining</Text>
       </Pressable>
     );
   };
@@ -181,6 +221,8 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
   }
 
   const totalSpent = getTotalSpent();
+  const activeClasses = memberClasses.filter(c => c.status === 'active');
+  const pausedClasses = memberClasses.filter(c => c.status === 'paused');
   const classCount = memberClasses.length;
 
   const renderHeader = () => (
@@ -209,9 +251,36 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
         <Text style={styles.addClassText}>+ Add Class</Text>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>Classes</Text>
+      {activeClasses.length > 0 && (
+        <Text style={styles.sectionTitle}>Active Classes ({activeClasses.length})</Text>
+      )}
     </>
   );
+
+  const renderPausedSection = () => {
+    if (pausedClasses.length === 0) return null;
+
+    return (
+      <View style={styles.pausedSection}>
+        <TouchableOpacity
+          style={styles.pausedSectionHeader}
+          onPress={() => setPausedSectionExpanded(!pausedSectionExpanded)}
+        >
+          <Text style={styles.pausedSectionTitle}>
+            Paused Classes ({pausedClasses.length})
+          </Text>
+          <Text style={styles.pausedSectionChevron}>
+            {pausedSectionExpanded ? '▼' : '▶'}
+          </Text>
+        </TouchableOpacity>
+        {pausedSectionExpanded && pausedClasses.map((classItem) => (
+          <View key={classItem.id}>
+            {renderClassCard({ item: classItem, isPaused: true })}
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   const renderEmptyComponent = () => (
     <View style={styles.emptyState}>
@@ -238,11 +307,12 @@ export default function FamilyMemberDetailScreen({ route, navigation }: any) {
       </View>
 
       <FlatList
-        data={memberClasses}
-        renderItem={renderClassCard}
+        data={activeClasses}
+        renderItem={({ item }) => renderClassCard({ item })}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={renderPausedSection}
+        ListEmptyComponent={activeClasses.length === 0 && pausedClasses.length === 0 ? renderEmptyComponent : null}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={onRefresh} />
@@ -426,6 +496,66 @@ const styles = StyleSheet.create({
   },
   remainingText: {
     fontSize: 13,
+    color: '#6B7280',
+  },
+  classCardPaused: {
+    opacity: 0.7,
+    backgroundColor: '#F9FAFB',
+  },
+  classHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pauseIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  classNamePaused: {
+    color: '#6B7280',
+  },
+  pausedText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  pausedReason: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  resumeButtonSmall: {
+    backgroundColor: '#10B981',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+  },
+  resumeButtonSmallText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pausedSection: {
+    marginTop: 24,
+    paddingBottom: 20,
+  },
+  pausedSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  pausedSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  pausedSectionChevron: {
+    fontSize: 14,
     color: '#6B7280',
   },
   emptyState: {
