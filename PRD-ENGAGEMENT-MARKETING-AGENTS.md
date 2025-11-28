@@ -492,13 +492,18 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
   // Check current progress
   const progress = await getOnboardingProgress(userId);
 
+  // Get variant for A/B testing (rotate between 3 message variants)
+  const notificationCount = await getNotificationCount(userId, 'onboarding');
+  const messageVariant = notificationCount % 3; // 3 different message angles
+
   // Day 1: Welcome + Add first family member
   if (daysSinceInstall === 1 && progress.family_members === 0) {
     return {
       action: 'send_notification',
-      message: generateMessage('day1_welcome', user),
+      message: generateMessage(`day1_welcome_variant_${messageVariant}`, user),
       deepLink: 'recur://add-family-member',
-      priority: 'medium'
+      priority: 'medium',
+      metadata: { variant: messageVariant }
     };
   }
 
@@ -507,16 +512,18 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
     if (progress.family_members === 0) {
       return {
         action: 'send_notification',
-        message: generateMessage('day3_add_member', user),
+        message: generateMessage(`day3_add_member_variant_${messageVariant}`, user),
         deepLink: 'recur://add-family-member',
-        priority: 'medium'
+        priority: 'medium',
+        metadata: { variant: messageVariant }
       };
     } else if (progress.classes === 0) {
       return {
         action: 'send_notification',
-        message: generateMessage('day3_add_class', user),
+        message: generateMessage(`day3_add_class_variant_${messageVariant}`, user, progress),
         deepLink: 'recur://add-class',
-        priority: 'medium'
+        priority: 'medium',
+        metadata: { variant: messageVariant }
       };
     }
   }
@@ -557,16 +564,76 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 }
 ```
 
-**Notification Messages:**
+**Notification Messages (with A/B Test Variants):**
 
-| Trigger | Title | Body | Deep Link |
-|---------|-------|------|-----------|
-| Day 1 - No family member | "Welcome to Recur!" | "Let's get started! Add yourself or a family member to begin tracking classes." | `add-family-member` |
-| Day 3 - No family member | "Quick setup!" | "It takes just 30 seconds to add your first family member and start tracking." | `add-family-member` |
-| Day 3 - No class | "Add your first class" | "You're doing great! Now add a class for {MemberName} to track attendance." | `add-class` |
-| Day 7 - Low attendance | "Mark your attendance" | "You've set up {ClassCount} class(es)! Mark attendance to see your progress." | `home` |
-| Day 14 - Incomplete | "Don't lose track!" | "You're almost there! Add more classes and bring your attendance up to date to stay in your rhythm" | `home` |
-| Day 14 - Complete | "You're all set! 🎉" | "You've tracked {X} classes in 2 weeks! Check out your Class Insights." | `analytics` |
+**Day 1 - No Family Member Added**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Value Prop | "Your classes, organized" | "Stop losing track of schedules and payments. Set up a profile for yourself or your family member in 30 seconds." | Pain point + quick win |
+| 1 - Social Proof | "Join organized parents" | "Thousands of parents track classes with Recur. Add your first class to get started." | FOMO + community |
+| 2 - Outcome Focus | "See your true cost per class" | "Find out exactly what you're paying per session. Add your class to unlock insights." | Curiosity + value |
+
+**Day 3 - No Family Member Added**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Time Saving | "Never miss a payment again" | "Parents save hours with Recur. Add your first family member and see why." | Benefit + social proof |
+| 1 - Money Focus | "Stop overpaying for classes" | "Know exactly what each class costs. Set up takes 30 seconds." | Financial pain point |
+| 2 - Simplicity | "Spreadsheets are so 2020" | "Track everything in one beautifully simple app. Add your first family member now." | Modern + easy |
+
+**Day 3 - No Class Added**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Progress | "See your progress at a glance" | "Great start! Add {MemberName}'s first class to unlock attendance tracking." | Encouragement + unlock |
+| 1 - Insights | "Unlock your class insights" | "You're one step away! Add a class for {MemberName} to see spending trends." | Near completion |
+| 2 - Quick Win | "Almost there, {FirstName}" | "Add {MemberName}'s class and start tracking attendance today. Takes 60 seconds." | Personal + speed |
+
+**Day 7 - Low Attendance**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Visual | "Your week in one view" | "You've added {ClassCount} class(es). Mark a few sessions to see your trends come to life." | Visualization |
+| 1 - Habit | "Build your tracking habit" | "Mark your recent classes now. It gets easier every time you do it." | Consistency |
+| 2 - Value | "See what you're really paying" | "{ClassCount} classes added. Mark attendance to calculate your cost per session." | ROI focus |
+
+**Day 14 - Incomplete (Not Yet Reached 1-1-5)**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| 0 - Progress Bar | "Get the full picture" | "You're {X}% there! Track a few more sessions to unlock insights on your class spending." | Gamification |
+| 1 - Near Win | "So close!" | "Just {Y} more sessions to see your full attendance analytics. You've got this!" | Encouragement |
+| 2 - Value Tease | "Unlock premium insights" | "Track {Y} more sessions to see cost-per-class, attendance streaks, and spending trends." | Feature reveal |
+
+**Day 14 - Complete (Reached 1-1-5)**
+
+| Variant | Title | Body | Angle |
+|---------|-------|------|-------|
+| ALL | "You're crushing it! 🎉" | "{X} classes tracked in 2 weeks. Check out how much you're saving per class." | Celebration + value |
+
+---
+
+**Copywriting Strategy:**
+
+Each variant tests a different psychological trigger:
+
+1. **Variant 0** - Practical benefit (time saving, organization, visibility)
+2. **Variant 1** - Emotional/social (FOMO, community, habit building, personal achievement)
+3. **Variant 2** - Financial value (ROI, cost insights, money saved)
+
+**Key Principles Applied:**
+- ✅ Lead with benefit, not feature ("Your week in one view" vs "Mark attendance")
+- ✅ Use concrete numbers and timeframes ("30 seconds", "{X} classes")
+- ✅ Create curiosity gaps ("Find out exactly...", "Unlock insights...")
+- ✅ Reference pain points ("Stop overpaying", "Never lose track")
+- ✅ Personalize with user data ({FirstName}, {MemberName}, {ClassCount})
+- ✅ Include social proof ("Thousands of parents", "Recur users...")
+- ✅ Keep it conversational and warm, not corporate
+- ✅ One clear call to action per message
+
+**Measurement:**
+Track open rate and action rate by variant to identify winning messages. After 1000 sends per variant, the system can auto-optimize by sending the highest-performing variant more frequently.
 
 ---
 
@@ -706,9 +773,9 @@ async function evaluateUser(userId: string): Promise<AgentDecision> {
 
 | Trigger | Title | Body | Deep Link |
 |---------|-------|------|-----------|
-| No schedule | "Add schedule for {ClassName}" | "Set up a schedule for {ClassName} to get automatic reminders." | `class/{id}/edit` |
-| No payment | "Track expenses for {ClassName}" | "Record your first payment for {ClassName} to see cost per class." | `class/{id}/record-payment` |
-| Low attendance | "Track {ClassName} regularly" | "Mark a few more sessions to see your attendance trends for {ClassName}." | `class/{id}` |
+| No schedule | "Never miss {ClassName} again" | "Add a schedule for {ClassName} and we'll remind you before each session." | `class/{id}/edit` |
+| No payment | "What's {ClassName} really costing?" | "Record your payment to see your actual cost per class. Takes 20 seconds." | `class/{id}/record-payment` |
+| Low attendance | "Complete the picture" | "Mark a few {ClassName} sessions to unlock your attendance insights." | `class/{id}` |
 
 ---
 
