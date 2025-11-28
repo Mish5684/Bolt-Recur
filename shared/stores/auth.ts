@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import type { User } from '@supabase/supabase-js';
+import { registerForPushNotifications, unregisterPushNotifications } from '../utils/pushNotifications';
 
 interface AuthStore {
   user: User | null;
@@ -57,6 +58,14 @@ export const useAuth = create<AuthStore>((set) => ({
         loading: false,
         error: null
       });
+
+      // Register for push notifications after successful login
+      if (data.user) {
+        registerForPushNotifications().catch((error) => {
+          console.error('Failed to register for push notifications:', error);
+        });
+      }
+
       return true;
     } catch (error) {
       set({
@@ -70,6 +79,10 @@ export const useAuth = create<AuthStore>((set) => ({
   signOut: async () => {
     try {
       set({ loading: true, error: null });
+
+      // Unregister push notifications before sign out
+      await unregisterPushNotifications();
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       set({ user: null, loading: false });
@@ -96,6 +109,13 @@ export const useAuth = create<AuthStore>((set) => ({
 
       supabase.auth.onAuthStateChange((_event, session) => {
         set({ user: session?.user ?? null });
+
+        // Register push notifications if user logs in
+        if (session?.user) {
+          registerForPushNotifications().catch((error) => {
+            console.error('Failed to register for push notifications:', error);
+          });
+        }
       });
     } catch (error) {
       set({
