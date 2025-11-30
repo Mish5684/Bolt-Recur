@@ -12,6 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "plugins": [
+      "expo-notifications"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.recur.classtracker",
@@ -20,7 +23,9 @@
         "NSLocationAlwaysUsageDescription": "This app needs access to your location to show distance to class venues and provide navigation."
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyCZS7VNHWj1YPC8C5v-oUUitJBRLKJWne8"
+        "googleMaps": {
+          "apiKey": "AIzaSyCZS7VNHWj1YPC8C5v-oUUitJBRLKJWne8"
+        }
       }
     },
     "android": {
