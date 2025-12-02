@@ -6,7 +6,12 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "ttps://zipaxzxolqypaugjvybh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcGF4enhvbHF5cGF1Z2p2eWJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyMDI3MTcsImV4cCI6MjA3Njc3ODcxN30.WRHggLerUlRBBhH8hen2xXWg7kCC6pRe4sYR6PcRyMU",
+        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyAnVf3O0cWzLcbrJ4f0FXDLuvF_hl4wxlQ"
+      }
     },
     "preview": {
       "distribution": "internal"
@@ -14,8 +19,6 @@
     "simulator": {
           "developmentClient": true,
           "distribution": "internal",
-          // Set to 'none' or 'adhoc' if you only want a simulator build
-          // The key is that the build machine itself isn't required to sign it strictly.
           "ios": {
             "buildConfiguration": "Debug",
             "simulator": true

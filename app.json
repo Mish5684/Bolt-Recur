@@ -2,6 +2,7 @@
   "expo": {
     "name": "Recur",
     "slug": "recur-class-tracker",
+    "scheme": "recurclasstracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,7 +21,10 @@
       "bundleIdentifier": "com.recur.classtracker",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show distance to class venues and provide navigation.",
-        "NSLocationAlwaysUsageDescription": "This app needs access to your location to show distance to class venues and provide navigation."
+        "NSLocationAlwaysUsageDescription": "This app needs access to your location to show distance to class venues and provide navigation.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       },
       "config": {
         "googleMaps": {
