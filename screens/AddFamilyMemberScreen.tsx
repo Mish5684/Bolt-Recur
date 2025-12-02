@@ -9,6 +9,9 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  FlatList,
+  Keyboard,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 
@@ -32,7 +35,7 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
   const [name, setName] = useState('');
   const [relation, setRelation] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0].emoji);
-  const [showRelationPicker, setShowRelationPicker] = useState(false);
+  const [showRelationModal, setShowRelationModal] = useState(false);
   const { addFamilyMember, updateFamilyMember, loading } = useRecur();
 
   useEffect(() => {
@@ -83,7 +86,7 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
         <View style={styles.form}>
           <Text style={styles.label}>Choose Avatar</Text>
           <View style={styles.avatarGrid}>
@@ -113,38 +116,17 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
 
           <Text style={styles.label}>Relation</Text>
           <TouchableOpacity
-            style={styles.pickerButton}
-            onPress={() => setShowRelationPicker(!showRelationPicker)}
+            style={styles.input}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowRelationModal(true);
+            }}
             disabled={loading}
           >
-            <Text style={[styles.pickerButtonText, !relation && styles.pickerPlaceholder]}>
+            <Text style={relation ? styles.inputText : styles.placeholderText}>
               {relation || 'Select relation'}
             </Text>
-            <Text style={styles.pickerChevron}>{showRelationPicker ? '▲' : '▼'}</Text>
           </TouchableOpacity>
-
-          {showRelationPicker && (
-            <View style={styles.pickerDropdown}>
-              {RELATIONS.map((rel) => (
-                <TouchableOpacity
-                  key={rel}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    setRelation(rel);
-                    setShowRelationPicker(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.pickerOptionText,
-                    relation === rel && styles.pickerOptionSelected
-                  ]}>
-                    {rel}
-                  </Text>
-                  {relation === rel && <Text style={styles.checkmark}>✓</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
       </ScrollView>
 
@@ -168,6 +150,36 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showRelationModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Relation</Text>
+            <FlatList
+              data={RELATIONS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setRelation(item);
+                    setShowRelationModal(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{item}</Text>
+                  {relation === item && <Text style={styles.checkmark}>✓</Text>}
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowRelationModal(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -195,6 +207,9 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   content: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   form: {
@@ -238,6 +253,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1F2937',
   },
+  inputText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+  },
   footer: {
     padding: 20,
     backgroundColor: '#FFFFFF',
@@ -272,50 +295,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  pickerButton: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    paddingVertical: 16,
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  pickerButtonText: {
+  modalCloseText: {
     fontSize: 16,
-    color: '#1F2937',
-  },
-  pickerPlaceholder: {
-    color: '#9CA3AF',
-  },
-  pickerChevron: {
-    fontSize: 12,
     color: '#6B7280',
-  },
-  pickerDropdown: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  pickerOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  pickerOptionText: {
-    fontSize: 16,
-    color: '#1F2937',
-  },
-  pickerOptionSelected: {
     fontWeight: '600',
-    color: '#2563EB',
   },
   checkmark: {
     fontSize: 16,

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Keyboard,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 import { ScheduleItem, LocationData } from '../shared/types/database';
@@ -158,7 +159,7 @@ export default function EditClassScreen({ route, navigation }: any) {
       </View>
 
       <View style={styles.content}>
-        <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
           <View style={styles.form}>
             <Text style={styles.label}>Class Name *</Text>
             <TextInput
@@ -173,7 +174,10 @@ export default function EditClassScreen({ route, navigation }: any) {
             <Text style={styles.label}>Class Type</Text>
             <TouchableOpacity
               style={styles.input}
-              onPress={() => setShowTypeModal(true)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowTypeModal(true);
+              }}
               disabled={loading}
             >
               <Text style={classType ? styles.inputText : styles.placeholderText}>
@@ -194,7 +198,10 @@ export default function EditClassScreen({ route, navigation }: any) {
             <Text style={styles.label}>Schedule</Text>
             <TouchableOpacity
               style={styles.scheduleButton}
-              onPress={() => setShowDayModal(true)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowDayModal(true);
+              }}
               disabled={loading}
             >
               <Text style={styles.scheduleButtonText}>+ Add Day/Time</Text>
