@@ -15,6 +15,7 @@ import {
 import { useRecur } from '../shared/stores/recur';
 import { ScheduleItem, LocationData } from '../shared/types/database';
 import LocationSearch from '../components/LocationSearch';
+import KeyboardToolbar from '../components/KeyboardToolbar';
 
 const CLASS_TYPES = [
   'Academic',
@@ -329,6 +330,8 @@ export default function AddClassScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
+
+      <KeyboardToolbar />
     </View>
   );
 }
