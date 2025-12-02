@@ -13,7 +13,6 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
-import KeyboardToolbar from '../components/KeyboardToolbar';
 
 const AVATARS = [
   { emoji: '👦', label: 'Boy Kid' },
@@ -181,8 +180,6 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
           </View>
         </View>
       </Modal>
-
-      <KeyboardToolbar />
     </View>
   );
 }

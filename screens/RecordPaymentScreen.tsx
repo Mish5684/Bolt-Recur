@@ -13,7 +13,6 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
-import KeyboardToolbar from '../components/KeyboardToolbar';
 
 const CURRENCIES = ['INR', 'USD', 'AED', 'EUR', 'GBP', 'SGD'];
 
@@ -232,8 +231,6 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
-
-      <KeyboardToolbar />
     </View>
   );
 }
