@@ -9,9 +9,8 @@ import {
   Alert,
   Modal,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 
@@ -78,10 +77,7 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -96,6 +92,8 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View>
         {isClassPaused && (
           <View style={styles.infoBanner}>
             <Text style={styles.infoBannerIcon}>ℹ️</Text>
@@ -181,7 +179,9 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
               </View>
             </View>
           )}
+          </View>
         </View>
+        </TouchableWithoutFeedback>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -231,7 +231,7 @@ export default function RecordPaymentScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

@@ -5,13 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
   Modal,
   FlatList,
   Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 import { ScheduleItem, LocationData } from '../shared/types/database';
@@ -148,10 +147,7 @@ export default function EditClassScreen({ route, navigation }: any) {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
           <Text style={styles.backText}>‹ Edit Class</Text>
@@ -160,7 +156,8 @@ export default function EditClassScreen({ route, navigation }: any) {
 
       <View style={styles.content}>
         <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
-          <View style={styles.form}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.form}>
             <Text style={styles.label}>Class Name *</Text>
             <TextInput
               style={styles.input}
@@ -169,6 +166,7 @@ export default function EditClassScreen({ route, navigation }: any) {
               value={className}
               onChangeText={setClassName}
               editable={!loading}
+              returnKeyType="next"
             />
 
             <Text style={styles.label}>Class Type</Text>
@@ -193,6 +191,8 @@ export default function EditClassScreen({ route, navigation }: any) {
               value={instructor}
               onChangeText={setInstructor}
               editable={!loading}
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
             />
 
             <Text style={styles.label}>Schedule</Text>
@@ -244,7 +244,8 @@ export default function EditClassScreen({ route, navigation }: any) {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+            </View>
+          </TouchableWithoutFeedback>
         </ScrollView>
       </View>
 
@@ -352,7 +353,7 @@ export default function EditClassScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

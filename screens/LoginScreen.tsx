@@ -5,10 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Image,
+  Keyboard,
+  TouchableWithoutFeedback,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../shared/stores/auth';
 
@@ -35,11 +36,13 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.content}>
         <View style={styles.header}>
           <Image
             source={require('../assets/icon.png')}
@@ -121,9 +124,11 @@ export default function LoginScreen({ navigation }: any) {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -132,10 +137,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+  },
+  content: {
     paddingHorizontal: 24,
+    paddingVertical: 48,
   },
   header: {
     marginBottom: 48,

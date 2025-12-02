@@ -5,13 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
   Modal,
   FlatList,
   Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 
@@ -76,10 +75,7 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
           <Text style={styles.backText}>‹ {isEditMode ? 'Edit' : 'Add'} Family Member</Text>
@@ -87,7 +83,8 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
-        <View style={styles.form}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.form}>
           <Text style={styles.label}>Choose Avatar</Text>
           <View style={styles.avatarGrid}>
             {AVATARS.map((avatar) => (
@@ -112,6 +109,8 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
             value={name}
             onChangeText={setName}
             editable={!loading}
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
           />
 
           <Text style={styles.label}>Relation</Text>
@@ -127,7 +126,8 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
               {relation || 'Select relation'}
             </Text>
           </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableWithoutFeedback>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -180,7 +180,7 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
