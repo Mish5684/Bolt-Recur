@@ -1,5 +1,9 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.38.4';
+import { evaluateAlertAgent } from './agents/alertAgent.ts';
+import { evaluateEngageAgent } from './agents/engageAgent.ts';
+import { evaluateGatherMoreInfoAgent } from './agents/gatherMoreInfoAgent.ts';
+import { evaluateOnboardingAgent } from './agents/onboardingAgent.ts';
+import { evaluateNeverTriedAgent } from './agents/neverTriedAgent.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +21,7 @@ interface NotificationPayload {
   priority?: 'default' | 'normal' | 'high';
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
@@ -53,7 +57,7 @@ serve(async (req: Request) => {
           .eq('user_id', user.id)
           .eq('is_active', true)
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (!pushTokenData?.expo_push_token) {
           console.log(`[Orchestrator] User ${user.id} has no active push token`);
@@ -76,7 +80,7 @@ serve(async (req: Request) => {
           .from('user_preferences')
           .select('timezone')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         const timezone = prefsData?.timezone || 'UTC';
 
@@ -91,27 +95,25 @@ serve(async (req: Request) => {
 
         // Evaluate agents in priority order
         const agents = [
-          { name: 'alert', priority: 1, module: './agents/alertAgent.ts' },
-          { name: 'engage', priority: 2, module: './agents/engageAgent.ts' },
-          { name: 'gather_more_info', priority: 3, module: './agents/gatherMoreInfoAgent.ts' },
-          { name: 'onboarding', priority: 4, module: './agents/onboardingAgent.ts' },
-          { name: 'never_tried', priority: 5, module: './agents/neverTriedAgent.ts' },
+          { name: 'alert', priority: 1, evaluate: evaluateAlertAgent },
+          { name: 'engage', priority: 2, evaluate: evaluateEngageAgent },
+          { name: 'gather_more_info', priority: 3, evaluate: evaluateGatherMoreInfoAgent },
+          { name: 'onboarding', priority: 4, evaluate: evaluateOnboardingAgent },
+          { name: 'never_tried', priority: 5, evaluate: evaluateNeverTriedAgent },
         ];
 
         let notificationSent = false;
 
         for (const agent of agents) {
           try {
-            // Dynamically import agent module
-            const agentModule = await import(agent.module);
-            const evaluateFunction = agentModule[`evaluate${agent.name.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join('')}Agent`];
-
-            if (!evaluateFunction) {
-              console.error(`[Orchestrator] Agent ${agent.name} has no evaluate function`);
-              continue;
+            // Call the agent evaluation function with appropriate parameters
+            let decision;
+            if (agent.name === 'onboarding' || agent.name === 'never_tried') {
+              // These agents need user created_at date
+              decision = await agent.evaluate(supabase, user.id, user.created_at, evaluationTime);
+            } else {
+              decision = await agent.evaluate(supabase, user.id, evaluationTime);
             }
-
-            const decision = await evaluateFunction(user.id, evaluationTime);
 
             // Log decision
             await supabase.from('agent_decision_log').insert({
