@@ -3,24 +3,24 @@
  *
  * Schedule format: Array of {day: string, time: string}
  * Example: [
- *   {day: "Monday", time: "15:00"},
- *   {day: "Wednesday", time: "15:00"}
+ *   {day: "Mon", time: "15:00"},
+ *   {day: "Wed", time: "15:00"}
  * ]
  */
 
 export interface ScheduleItem {
-  day: string; // Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+  day: string; // Sun, Mon, Tue, Wed, Thu, Fri, Sat
   time: string; // HH:mm format (24-hour)
 }
 
 const DAYS_OF_WEEK = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday'
+  'Sun',
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat'
 ];
 
 /**

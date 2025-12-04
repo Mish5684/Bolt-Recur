@@ -46,7 +46,7 @@ export async function evaluateEngageAgent(
 
       // Get the scheduled time for today
       const scheduledTimes = classItem.schedule.filter(
-        (item: any) => item.day === ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][currentDay]
+        (item: any) => item.day === ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][currentDay]
       );
 
       if (scheduledTimes.length === 0) continue;
