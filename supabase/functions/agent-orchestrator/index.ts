@@ -64,14 +64,14 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Check frequency cap (max 1 per day)
+        // Check frequency cap (max 2 per day)
         const { data: notificationCountData } = await supabase.rpc('get_notification_count_today', {
           p_user_id: user.id
         });
 
         const notificationsToday = notificationCountData || 0;
-        if (notificationsToday >= 1) {
-          console.log(`[Orchestrator] User ${user.id} already received notification today`);
+        if (notificationsToday >= 2) {
+          console.log(`[Orchestrator] User ${user.id} already received ${notificationsToday} notifications today`);
           continue;
         }
 
