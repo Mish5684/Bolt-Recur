@@ -208,7 +208,6 @@ Create panels for each observability query.
 Configure alerts for:
 - Notification delivery failures
 - High skip rates
-- Quiet hours violations
 - Low open rates
 
 **Pros:**
@@ -317,7 +316,6 @@ export function AgentPerformanceCard() {
 - 📈 User growth
 - 📈 Retention metrics
 - 📈 Agent effectiveness (conversion rates)
-- 📈 Quiet hours violations (should be 0)
 
 ---
 
@@ -331,13 +329,10 @@ Set up alerts for:
 2. **Low Open Rate** (<10% for any notification type)
    - Indicates notification copy needs improvement
 
-3. **Quiet Hours Violations** (any violations)
-   - Critical: Indicates timezone logic failure
-
-4. **No Notifications Sent** (24 hours with 0 sent)
+3. **No Notifications Sent** (24 hours with 0 sent)
    - Indicates edge function or cron failure
 
-5. **High Frequency** (user receives >3 notifications/day)
+4. **High Frequency** (user receives >2 notifications/day)
    - Indicates frequency cap failure
 
 ---

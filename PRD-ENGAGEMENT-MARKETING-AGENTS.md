@@ -90,7 +90,7 @@ A simplified, rule-based notification system that sends **gentle nudges** to hel
 
 1. **Rule-Based, Not AI** - All logic is deterministic, no LLMs, clear decision trees
 2. **User-Centric** - Every notification is personalized with user's data (names, class names, dates)
-3. **Non-Intrusive** - Max 1 notification/day, quiet hours (10 PM - 8 AM), respects pause state
+3. **Non-Intrusive** - Max 2 notifications/day, respects pause state
 4. **Pause-Aware** - Agents only target active classes, automatically skip paused ones
 5. **Measurable** - Every decision logged, every notification tracked
 
@@ -747,7 +747,6 @@ async function evaluateUser(userId: string, evaluationTime: Date): Promise<Agent
 **DnD Rule for Pre-Class Alerts:**
 - Classes scheduled at **10 AM or later** → Alert sent **2 hours before** (same day)
 - Classes scheduled **before 10 AM** → Alert sent at **9 PM the prior day**
-- This ensures no alerts are sent during quiet hours (10 PM - 8 AM)
 
 ---
 
@@ -759,10 +758,9 @@ The **Agent Orchestrator** is a Supabase Edge Function that runs every hour and 
 
 **Key Behaviors:**
 
-1. **Frequency Cap:** Max 1 notification per user per day
-2. **Quiet Hours:** No notifications between 10 PM - 8 AM (user local time)
-3. **Priority System:** Agents evaluated in priority order, first match wins
-4. **Pause-Aware:** All agents skip if user has no active classes
+1. **Frequency Cap:** Max 2 notifications per user per day
+2. **Priority System:** Agents evaluated in priority order, first match wins
+3. **Pause-Aware:** All agents skip if user has no active classes
 
 **Priority Order:**
 
@@ -821,19 +819,10 @@ serve(async (req: Request) => {
           continue;
         }
 
-        // Check frequency cap (max 1 per day)
+        // Check frequency cap (max 2 per day)
         const notificationsToday = await getNotificationCountToday(supabase, user.id);
-        if (notificationsToday >= 1) {
-          console.log(`[Orchestrator] User ${user.id} already received notification today`);
-          continue;
-        }
-
-        // Check quiet hours (10 PM - 8 AM)
-        const userTimezone = await getUserTimezone(supabase, user.id);
-        const userLocalHour = getUserLocalHour(evaluationTime, userTimezone);
-
-        if (userLocalHour >= 22 || userLocalHour < 8) {
-          console.log(`[Orchestrator] User ${user.id} in quiet hours (${userLocalHour}:00)`);
+        if (notificationsToday >= 2) {
+          console.log(`[Orchestrator] User ${user.id} already received ${notificationsToday} notifications today`);
           continue;
         }
 
@@ -1036,7 +1025,7 @@ CREATE POLICY "Service role can manage agent decisions"
 
 1. Implement Onboarding Agent (Day 3 and Day 7 logic)
 2. Create agent orchestrator skeleton (runs every hour)
-3. Add frequency cap and quiet hours logic
+3. Add frequency cap logic
 4. Test with real users in onboarding flow
 
 **Deliverable:** New users receive Day 3 and Day 7 onboarding nudges

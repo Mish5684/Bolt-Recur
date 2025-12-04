@@ -301,17 +301,13 @@ LIMIT 50;
    SELECT * FROM user_push_tokens WHERE user_id = 'YOUR_USER_ID';
    ```
 
-2. **Check quiet hours:**
-   - Verify user's timezone in `user_preferences`
-   - Ensure current time isn't 10 PM - 8 AM in user's timezone
-
-3. **Check frequency cap:**
+2. **Check frequency cap:**
    ```sql
    SELECT get_notification_count_today('YOUR_USER_ID');
    ```
-   Should be < 1 to send new notification
+   Should be < 2 to send new notification
 
-4. **Check Expo push token format:**
+3. **Check Expo push token format:**
    - Should start with `ExponentPushToken[`
    - Test token at: https://expo.dev/notifications
 

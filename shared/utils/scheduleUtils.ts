@@ -179,33 +179,6 @@ export function formatTime(date: Date): string {
 }
 
 /**
- * Get user's local hour from evaluation time and timezone
- * @param evaluationTime Current evaluation time (UTC or any timezone)
- * @param timezone User's timezone (e.g., "America/New_York")
- * @returns Hour in user's local time (0-23)
- */
-export function getUserLocalHour(evaluationTime: Date, timezone: string = 'UTC'): number {
-  try {
-    const localTime = new Date(evaluationTime.toLocaleString('en-US', { timeZone: timezone }));
-    return localTime.getHours();
-  } catch (error) {
-    console.error('Invalid timezone:', timezone, error);
-    return evaluationTime.getHours(); // Fallback to UTC
-  }
-}
-
-/**
- * Check if current time is within quiet hours (10 PM - 8 AM)
- * @param currentTime Current time
- * @param timezone User's timezone
- * @returns true if within quiet hours
- */
-export function isQuietHours(currentTime: Date, timezone: string = 'UTC'): boolean {
-  const localHour = getUserLocalHour(currentTime, timezone);
-  return localHour >= 22 || localHour < 8;
-}
-
-/**
  * Calculate days since a date
  * @param date Date to calculate from
  * @returns Number of days (integer)

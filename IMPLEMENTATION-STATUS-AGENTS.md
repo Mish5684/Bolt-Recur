@@ -55,8 +55,6 @@ Implementation of the engagement marketing agents system for Recur app based on 
 - ✅ `getScheduledTimesForToday()` - Get all scheduled times for today
 - ✅ `getHoursUntil()` - Calculate hours between two dates
 - ✅ `formatTime()` - Format time for display (e.g., "3:00 PM")
-- ✅ `getUserLocalHour()` - Get user's local hour from timezone
-- ✅ `isQuietHours()` - Check if within quiet hours (10 PM - 8 AM)
 - ✅ `getDaysSince()` - Calculate days since a date
 - ✅ `isValidSchedule()` - Validate schedule JSONB format
 
@@ -163,8 +161,7 @@ interface ScheduleItem {
 **Implemented Features:**
 - Runs hourly via cron
 - Evaluates all users
-- Checks frequency cap (max 1 notification/day)
-- Checks quiet hours (10 PM - 8 AM) using user timezone
+- Checks frequency cap (max 2 notifications/day)
 - Evaluates agents in priority order
 - Sends push notifications via Expo Push API
 - Logs decisions and notifications

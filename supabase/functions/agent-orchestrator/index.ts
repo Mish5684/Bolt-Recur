@@ -50,24 +50,6 @@ Deno.serve(async (req: Request) => {
       try {
         usersProcessed++;
 
-        // Get user timezone for quiet hours check
-        const { data: prefsData } = await supabase
-          .from('user_preferences')
-          .select('timezone')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        const timezone = prefsData?.timezone || 'UTC';
-
-        // Check quiet hours (10 PM - 8 AM)
-        const userLocalTime = new Date(evaluationTime.toLocaleString('en-US', { timeZone: timezone }));
-        const userLocalHour = userLocalTime.getHours();
-
-        if (userLocalHour >= 22 || userLocalHour < 8) {
-          console.log(`[Orchestrator] User ${user.id} in quiet hours (${userLocalHour}:00 ${timezone})`);
-          continue;
-        }
-
         // Evaluate agents in priority order
         const agents = [
           { name: 'alert', priority: 1, evaluate: evaluateAlertAgent },

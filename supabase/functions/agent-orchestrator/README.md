@@ -79,8 +79,7 @@ Check logs in Supabase Dashboard > Edge Functions > agent-orchestrator > Logs
 5. **Never Tried Agent** (Priority 5) - Dormant user reactivation
 
 ### Rules
-- **Max 1 notification per user per day** (frequency cap)
-- **Quiet hours**: No notifications 10 PM - 8 AM (user's local timezone)
+- **Max 2 notifications per user per day** (frequency cap)
 - **First match wins**: Once an agent decides to send, stop evaluating
 - **Pause-aware**: All agents filter for `status = 'active'` classes
 
@@ -127,8 +126,7 @@ curl -X POST \
 
 ### No Notifications Sent
 - Check if users have active push tokens in `user_push_tokens` table
-- Verify quiet hours haven't blocked notifications
-- Check frequency cap (max 1/day per user)
+- Check frequency cap (max 2/day per user)
 - Review `agent_decision_log` table for agent decisions
 
 ### Push Notifications Fail

@@ -571,8 +571,7 @@ Add a button in Settings or home screen to navigate to test screen.
 - [ ] Agent decisions logged correctly
 - [ ] Notifications logged in history
 - [ ] Deep links navigate correctly
-- [ ] No quiet hours violations
-- [ ] Frequency cap working (max 1/day)
+- [ ] Frequency cap working (max 2/day)
 
 ---
 

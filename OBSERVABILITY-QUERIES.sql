@@ -185,32 +185,7 @@ ORDER BY notifications_sent DESC;
 SELECT * FROM notification_frequency_check;
 
 -- =====================================================
--- 7. QUIET HOURS VIOLATIONS
--- =====================================================
-
--- Check if any notifications sent during quiet hours
--- (Should be zero if system is working correctly)
-CREATE OR REPLACE VIEW quiet_hours_violations AS
-SELECT
-  u.email,
-  nh.agent_name,
-  nh.sent_at,
-  up.timezone,
-  EXTRACT(HOUR FROM nh.sent_at AT TIME ZONE COALESCE(up.timezone, 'UTC')) as local_hour
-FROM notification_history nh
-JOIN auth.users u ON u.id = nh.user_id
-LEFT JOIN user_preferences up ON up.user_id = u.id
-WHERE nh.sent_at >= NOW() - INTERVAL '7 days'
-  AND (
-    EXTRACT(HOUR FROM nh.sent_at AT TIME ZONE COALESCE(up.timezone, 'UTC')) >= 22
-    OR EXTRACT(HOUR FROM nh.sent_at AT TIME ZONE COALESCE(up.timezone, 'UTC')) < 8
-  );
-
--- View it (should be empty!)
-SELECT * FROM quiet_hours_violations;
-
--- =====================================================
--- 8. AGENT EFFECTIVENESS (Conversions)
+-- 7. AGENT EFFECTIVENESS (Conversions)
 -- =====================================================
 
 -- Did notifications lead to user actions?
@@ -250,7 +225,7 @@ ORDER BY conversion_rate_percentage DESC;
 SELECT * FROM agent_effectiveness;
 
 -- =====================================================
--- 9. DAILY AGENT ACTIVITY TIMELINE
+-- 8. DAILY AGENT ACTIVITY TIMELINE
 -- =====================================================
 
 -- Visualize agent activity over time
@@ -272,7 +247,7 @@ WHERE date >= CURRENT_DATE - INTERVAL '7 days'
 ORDER BY date DESC;
 
 -- =====================================================
--- 10. USER NOTIFICATION TIMELINE (Individual User)
+-- 9. USER NOTIFICATION TIMELINE (Individual User)
 -- =====================================================
 
 -- View notification history for a specific user
@@ -305,7 +280,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- SELECT * FROM get_user_notification_timeline('user@example.com');
 
 -- =====================================================
--- 11. SYSTEM HEALTH CHECK
+-- 10. SYSTEM HEALTH CHECK
 -- =====================================================
 
 CREATE OR REPLACE VIEW system_health_check AS
@@ -352,7 +327,7 @@ FROM (
 SELECT * FROM system_health_check;
 
 -- =====================================================
--- 12. EXPORT FOR EXTERNAL DASHBOARDS
+-- 11. EXPORT FOR EXTERNAL DASHBOARDS
 -- =====================================================
 
 -- Create a JSON export for external tools (e.g., Google Sheets, Metabase)

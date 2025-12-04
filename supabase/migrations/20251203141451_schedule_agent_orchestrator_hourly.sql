@@ -17,7 +17,7 @@
   
   ## Important Notes
   - The cron job uses the service role to authenticate with the edge function
-  - All agent logic (quiet hours, frequency caps, pause-aware filtering) is
+  - All agent logic (frequency caps, pause-aware filtering) is
     handled within the edge function itself
   - Job execution logs can be viewed in the cron.job_run_details table
 */
