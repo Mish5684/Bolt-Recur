@@ -50,32 +50,7 @@ Deno.serve(async (req: Request) => {
       try {
         usersProcessed++;
 
-        // Check if user has push token
-        const { data: pushTokenData } = await supabase
-          .from('user_push_tokens')
-          .select('expo_push_token')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
-
-        if (!pushTokenData?.expo_push_token) {
-          console.log(`[Orchestrator] User ${user.id} has no active push token`);
-          continue;
-        }
-
-        // Check frequency cap (max 2 per day)
-        const { data: notificationCountData } = await supabase.rpc('get_notification_count_today', {
-          p_user_id: user.id
-        });
-
-        const notificationsToday = notificationCountData || 0;
-        if (notificationsToday >= 2) {
-          console.log(`[Orchestrator] User ${user.id} already received ${notificationsToday} notifications today`);
-          continue;
-        }
-
-        // Get user timezone
+        // Get user timezone for quiet hours check
         const { data: prefsData } = await supabase
           .from('user_preferences')
           .select('timezone')
@@ -115,7 +90,7 @@ Deno.serve(async (req: Request) => {
               decision = await agent.evaluate(supabase, user.id, evaluationTime);
             }
 
-            // Log decision
+            // Log decision for ALL users (even without push tokens)
             await supabase.from('agent_decision_log').insert({
               user_id: user.id,
               agent_name: agent.name,
@@ -124,7 +99,50 @@ Deno.serve(async (req: Request) => {
               metadata: decision.metadata || {}
             });
 
+            console.log(`[Orchestrator] Agent ${agent.name} decision for user ${user.id}: ${decision.action} - ${decision.reason || 'no reason'}`);
+
             if (decision.action === 'send_notification' && decision.message) {
+              // Check if user has push token ONLY when we need to send
+              const { data: pushTokenData } = await supabase
+                .from('user_push_tokens')
+                .select('expo_push_token')
+                .eq('user_id', user.id)
+                .eq('is_active', true)
+                .limit(1)
+                .maybeSingle();
+
+              if (!pushTokenData?.expo_push_token) {
+                console.log(`[Orchestrator] Decision made but user ${user.id} has no active push token - skipping notification`);
+                results.push({
+                  userId: user.id,
+                  agent: agent.name,
+                  status: 'no_push_token',
+                  decision: decision.action,
+                  reason: decision.reason,
+                  title: decision.message.title
+                });
+                break; // Agent made a decision, stop evaluating other agents
+              }
+
+              // Check frequency cap (max 2 per day)
+              const { data: notificationCountData } = await supabase.rpc('get_notification_count_today', {
+                p_user_id: user.id
+              });
+
+              const notificationsToday = notificationCountData || 0;
+              if (notificationsToday >= 2) {
+                console.log(`[Orchestrator] Decision made but user ${user.id} already received ${notificationsToday} notifications today`);
+                results.push({
+                  userId: user.id,
+                  agent: agent.name,
+                  status: 'frequency_capped',
+                  decision: decision.action,
+                  reason: decision.reason,
+                  title: decision.message.title
+                });
+                break; // Agent made a decision, stop evaluating other agents
+              }
+
               // Prepare Expo push notification
               const notification: NotificationPayload = {
                 to: pushTokenData.expo_push_token,
@@ -191,7 +209,7 @@ Deno.serve(async (req: Request) => {
         }
 
         if (!notificationSent) {
-          console.log(`[Orchestrator] No notification sent for user ${user.id}`);
+          console.log(`[Orchestrator] No notification sent for user ${user.id} (all agents returned skip or no push token)`);
         }
       } catch (userError) {
         console.error(`[Orchestrator] Error processing user ${user.id}:`, userError);
