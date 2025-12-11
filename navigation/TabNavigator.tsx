@@ -25,7 +25,7 @@ const AnalyticsIcon = ({ focused }: { focused: boolean }) => (
 
 const NotificationsIcon = ({ focused, badgeCount }: { focused: boolean; badgeCount: number }) => (
   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-    <Text style={{ fontSize: 24 }}>{focused ? '🔔' : '🔕'}</Text>
+    <Text style={{ fontSize: 24 }}>🔔</Text>
     {badgeCount > 0 && (
       <View style={styles.badge}>
         <Text style={styles.badgeText}>
