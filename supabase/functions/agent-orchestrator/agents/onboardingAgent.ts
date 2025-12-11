@@ -140,6 +140,7 @@ export async function evaluateOnboardingAgent(
       deepLink,
       priority,
       metadata: {
+        notification_type: 'onboarding_milestone',
         family_members: progress.familyMembers,
         classes: allClasses.length,
         active_classes: activeClasses.length,

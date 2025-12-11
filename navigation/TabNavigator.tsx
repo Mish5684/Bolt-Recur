@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import HomeScreen from '../screens/HomeScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import { useAuthStore } from '../shared/stores/auth';
+import { getActionableCount } from '../shared/utils/notificationValidation';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,13 +23,67 @@ const AnalyticsIcon = ({ focused }: { focused: boolean }) => (
   </View>
 );
 
+const NotificationsIcon = ({ focused, badgeCount }: { focused: boolean; badgeCount: number }) => (
+  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <Text style={{ fontSize: 24 }}>{focused ? '🔔' : '🔕'}</Text>
+    {badgeCount > 0 && (
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </Text>
+      </View>
+    )}
+  </View>
+);
+
 const SettingsIcon = ({ focused }: { focused: boolean }) => (
   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
     <Text style={{ fontSize: 24 }}>{focused ? '⚙️' : '⚙️'}</Text>
   </View>
 );
 
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    right: -8,
+    top: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+});
+
 export default function TabNavigator() {
+  const user = useAuthStore((state) => state.user);
+  const [badgeCount, setBadgeCount] = useState(0);
+
+  const updateBadgeCount = async () => {
+    if (!user?.id) return;
+    const count = await getActionableCount(user.id);
+    setBadgeCount(count);
+  };
+
+  useEffect(() => {
+    updateBadgeCount();
+    const interval = setInterval(updateBadgeCount, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      updateBadgeCount();
+    }, [user?.id])
+  );
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -60,6 +118,21 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: 'Analytics',
           tabBarIcon: AnalyticsIcon,
+        }}
+      />
+      <Tab.Screen
+        name="NotificationsTab"
+        component={NotificationsScreen}
+        options={{
+          tabBarLabel: 'Notifications',
+          tabBarIcon: ({ focused }) => (
+            <NotificationsIcon focused={focused} badgeCount={badgeCount} />
+          ),
+        }}
+        listeners={{
+          tabPress: () => {
+            updateBadgeCount();
+          },
         }}
       />
       <Tab.Screen

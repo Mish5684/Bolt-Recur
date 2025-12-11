@@ -127,6 +127,7 @@ export async function evaluateGatherMoreInfoAgent(
       deepLink,
       priority: 'medium',
       metadata: {
+        notification_type: nudgeType === 'schedule' ? 'add_schedule' : 'add_payment_tracking',
         class_id: targetClass.id,
         class_name: targetClass.name,
         nudge_type: nudgeType,

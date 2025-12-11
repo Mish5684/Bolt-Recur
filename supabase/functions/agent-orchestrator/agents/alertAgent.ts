@@ -11,7 +11,7 @@ import {
   getActiveClasses,
   getPrepaidBalance,
   getPaymentCount,
-  getLastNotificationForAgent,
+  hasActiveInAppNotification,
   NotificationDecision,
 } from '../utils/agentHelpers.ts';
 import {
@@ -65,22 +65,16 @@ export async function evaluateAlertAgent(
       }
 
       if (shouldSendAlert) {
-        // Check if already notified in last 24 hours
-        const lastNotification = await getLastNotificationForAgent(
+        // Check if active notification already exists
+        const hasActiveNotification = await hasActiveInAppNotification(
           supabase,
           userId,
-          'pre_class_alert',
+          'pre_class_reminder',
           classItem.id
         );
 
-        if (lastNotification) {
-          const hoursSinceLastNotif = getHoursUntil(
-            new Date(lastNotification.sent_at),
-            evaluationTime
-          );
-          if (hoursSinceLastNotif < 24) {
-            continue; // Skip, already notified recently
-          }
+        if (hasActiveNotification) {
+          continue; // Skip, active notification already exists
         }
 
         const timeDisplay = formatTime(nextScheduledTime);
@@ -96,7 +90,7 @@ export async function evaluateAlertAgent(
           metadata: {
             class_id: classItem.id,
             scheduled_time: nextScheduledTime.toISOString(),
-            alert_type: 'pre_class_reminder'
+            notification_type: 'pre_class_reminder'
           }
         });
       }
@@ -116,15 +110,16 @@ export async function evaluateAlertAgent(
 
         // Low balance definition: < 3 classes remaining
         if (balance.remaining < 3 && balance.remaining >= 0) {
-          const lastAlert = await getLastNotificationForAgent(
+          // Check if active notification already exists
+          const hasActiveNotification = await hasActiveInAppNotification(
             supabase,
             userId,
-            'low_balance_alert',
+            'low_balance',
             classItem.id
           );
 
-          // Send once when hitting threshold, don't repeat
-          if (!lastAlert) {
+          // Send once when hitting threshold, don't repeat if active notification exists
+          if (!hasActiveNotification) {
             alerts.push({
               action: 'send_notification',
               message: {
@@ -136,7 +131,7 @@ export async function evaluateAlertAgent(
               metadata: {
                 class_id: classItem.id,
                 balance_remaining: balance.remaining,
-                alert_type: 'low_balance'
+                notification_type: 'low_balance'
               }
             });
           }

@@ -76,3 +76,28 @@ export interface ClassSubscription {
 }
 
 export interface ClassWithDetails extends Class {}
+
+export interface InAppNotification {
+  id: string;
+  user_id: string;
+  agent_name: 'alert' | 'engage' | 'onboarding' | 'gather_more_info' | 'never_tried';
+  notification_type: string;
+  title: string;
+  body: string;
+  deep_link: string | null;
+  priority: 'high' | 'medium' | 'low';
+  metadata: Record<string, any>;
+  generation_time: 'evening' | 'morning';
+  created_at: string;
+  read_at: string | null;
+  action_completed_at: string | null;
+  dismissed_at: string | null;
+}
+
+export interface NotificationPushLog {
+  id: string;
+  user_id: string;
+  push_type: 'evening_summary' | 'morning_summary';
+  sent_at: string;
+  notification_count: number;
+}

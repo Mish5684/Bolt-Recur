@@ -121,7 +121,7 @@ export async function hasRecentNotification(
 }
 
 /**
- * Get last notification for specific agent and optional class
+ * Get last notification for specific agent and optional class (from notification_history)
  */
 export async function getLastNotificationForAgent(
   supabase: SupabaseClient,
@@ -153,6 +153,43 @@ export async function getLastNotificationForAgent(
   } catch (error) {
     console.error('Exception getting last notification:', error);
     return null;
+  }
+}
+
+/**
+ * Check if an active in-app notification already exists
+ * Active means: not dismissed AND not action completed
+ */
+export async function hasActiveInAppNotification(
+  supabase: SupabaseClient,
+  userId: string,
+  notificationType: string,
+  classId?: string
+): Promise<boolean> {
+  try {
+    let query = supabase
+      .from('in_app_notifications')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('notification_type', notificationType)
+      .is('dismissed_at', null)
+      .is('action_completed_at', null);
+
+    if (classId) {
+      query = query.contains('metadata', { class_id: classId });
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error checking active in-app notification:', error);
+      return false;
+    }
+
+    return data && data.length > 0;
+  } catch (error) {
+    console.error('Exception checking active in-app notification:', error);
+    return false;
   }
 }
 

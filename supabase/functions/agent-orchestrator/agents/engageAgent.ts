@@ -9,7 +9,7 @@
 import { SupabaseClient } from 'npm:@supabase/supabase-js@2.38.4';
 import {
   getActiveClasses,
-  getLastNotificationForAgent,
+  hasActiveInAppNotification,
   NotificationDecision,
 } from '../utils/agentHelpers.ts';
 import {
@@ -83,22 +83,16 @@ export async function evaluateEngageAgent(
             continue;
           }
 
-          // Check if we've already sent reminder today
-          const lastNotification = await getLastNotificationForAgent(
+          // Check if active notification already exists
+          const hasActiveNotification = await hasActiveInAppNotification(
             supabase,
             userId,
             'post_class_reminder',
             classItem.id
           );
 
-          if (lastNotification) {
-            const hoursSinceLastNotif = getHoursUntil(
-              new Date(lastNotification.sent_at),
-              evaluationTime
-            );
-            if (hoursSinceLastNotif < 24) {
-              continue; // Already sent today
-            }
+          if (hasActiveNotification) {
+            continue; // Active notification already exists
           }
 
           // Send post-class reminder
@@ -115,7 +109,8 @@ export async function evaluateEngageAgent(
               class_id: classItem.id,
               class_name: classItem.name,
               notification_type: 'post_class_reminder',
-              scheduled_time: scheduledTime.toISOString()
+              scheduled_time: scheduledTime.toISOString(),
+              attendance_date: evaluationTime.toISOString().split('T')[0]
             }
           };
         }
@@ -124,21 +119,18 @@ export async function evaluateEngageAgent(
 
     // PRIORITY 2: Weekly summary (Sunday 6 PM)
     if (currentDay === 0 && currentHour === 18) {
-      // Check if we've already sent weekly summary this week
-      const lastNotification = await getLastNotificationForAgent(
+      // Check if active notification already exists
+      const hasActiveNotification = await hasActiveInAppNotification(
         supabase,
         userId,
         'weekly_summary'
       );
 
-      if (lastNotification) {
-        const daysSinceLastNotif = getDaysSince(lastNotification.sent_at);
-        if (daysSinceLastNotif < 7) {
-          return {
-            action: 'skip',
-            reason: 'Weekly summary already sent this week'
-          };
-        }
+      if (hasActiveNotification) {
+        return {
+          action: 'skip',
+          reason: 'Weekly summary notification already active'
+        };
       }
 
       // Calculate weekly and monthly attendance stats

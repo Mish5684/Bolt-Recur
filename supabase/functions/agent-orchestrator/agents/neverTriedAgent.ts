@@ -102,6 +102,7 @@ export async function evaluateNeverTriedAgent(
       deepLink: 'recur://add-family-member',
       priority,
       metadata: {
+        notification_type: 'dormant_reactivation',
         days_since_install: daysSinceInstall,
         family_members: 0,
         trigger_type: 'dormant_reactivation'
