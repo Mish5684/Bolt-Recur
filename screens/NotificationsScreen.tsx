@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../shared/api/supabase';
-import { useAuthStore } from '../shared/stores/auth';
+import { useAuth } from '../shared/stores/auth';
 import { InAppNotification } from '../shared/types/database';
 import {
   validateAndUpdateNotifications,
@@ -26,7 +26,7 @@ interface GroupedNotifications {
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuth((state) => state.user);
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

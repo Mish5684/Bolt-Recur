@@ -6,7 +6,7 @@ import HomeScreen from '../screens/HomeScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import { useAuthStore } from '../shared/stores/auth';
+import { useAuth } from '../shared/stores/auth';
 import { getActionableCount } from '../shared/utils/notificationValidation';
 
 const Tab = createBottomTabNavigator();
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
 });
 
 export default function TabNavigator() {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuth((state) => state.user);
   const [badgeCount, setBadgeCount] = useState(0);
 
   const updateBadgeCount = async () => {
