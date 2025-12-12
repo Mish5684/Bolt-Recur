@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import HomeScreen from '../screens/HomeScreen';
-import AnalyticsScreen from '../screens/AnalyticsScreen';
+import InsightsScreen from '../screens/InsightsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { useAuth } from '../shared/stores/auth';
@@ -17,7 +17,7 @@ const HomeIcon = ({ focused }: { focused: boolean }) => (
   </View>
 );
 
-const AnalyticsIcon = ({ focused }: { focused: boolean }) => (
+const InsightsIcon = ({ focused }: { focused: boolean }) => (
   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
     <Text style={{ fontSize: 24 }}>{focused ? '📊' : '📈'}</Text>
   </View>
@@ -113,11 +113,11 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="AnalyticsTab"
-        component={AnalyticsScreen}
+        name="InsightsTab"
+        component={InsightsScreen}
         options={{
-          tabBarLabel: 'Analytics',
-          tabBarIcon: AnalyticsIcon,
+          tabBarLabel: 'Insights',
+          tabBarIcon: InsightsIcon,
         }}
       />
       <Tab.Screen

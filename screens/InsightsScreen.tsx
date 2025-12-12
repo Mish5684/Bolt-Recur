@@ -14,7 +14,7 @@ import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from
 
 const { width } = Dimensions.get('window');
 
-export default function AnalyticsScreen({ navigation }: any) {
+export default function InsightsScreen({ navigation }: any) {
   const {
     familyMembers,
     fetchAllFamilyMembers,
@@ -122,7 +122,7 @@ export default function AnalyticsScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Analytics</Text>
+        <Text style={styles.title}>Insights</Text>
       </View>
 
       <ScrollView

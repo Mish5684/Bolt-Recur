@@ -1,14 +1,14 @@
 ---
-title: Analytics Screen - Product Requirements Document
+title: Insights Screen - Product Requirements Document
 version: 1.0.0
 date: 2025-12-12
 status: Draft
 ---
 
-# Analytics Screen - Product Requirements Document
+# Insights Screen - Product Requirements Document
 
 ## Overview
-The Analytics screen provides insights into attendance patterns and spending across family members and classes. It adapts intelligently to available data (attendance, schedule, payments) and offers both individual and family-level views.
+The Insights screen provides actionable data about attendance patterns and spending across family members and classes. It adapts intelligently to available data (attendance, schedule, payments) and offers both individual and family-level views.
 
 ---
 
@@ -82,21 +82,28 @@ interface ClassSubscription {
 
 ```
 ┌─────────────────────────────────────────┐
-│  Analytics                              │
+│  Insights                               │
 ├─────────────────────────────────────────┤
 │                                         │
-│  [All Family ▼] [Sarah] [Tom] [Mom]    │
-│   (selected)                            │
+│  Select Family Member                   │
+│  ┌───────────────────────────────────┐ │
+│  │ All Family                      ▼ │ │
+│  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
 ```
 
 **Behavior:**
-- Horizontal scrollable selector at top
+- Dropdown selector at top of screen
+- Tap to open modal/bottom sheet with options:
+  - All Family (default)
+  - Sarah
+  - Tom
+  - Mom
 - "All Family" shows aggregated family-level insights
-- Individual member chips show per-member deep dive
+- Individual member selection shows per-member deep dive
 - Selection persists across app sessions
-- Active selection highlighted with primary color
+- Dropdown shows currently selected member/option
 
 ---
 
@@ -650,12 +657,13 @@ Add schedule to see value analysis
 
 ```
 ┌─────────────────────────────────────────┐
-│  Analytics                        [≡]   │
+│  Insights                         [≡]   │
 ├─────────────────────────────────────────┤
 │                                         │
-│  [All Family ▼] [Sarah] [Tom] [Mom]    │
-│                 ^^^^^^                  │
-│                 selected                │
+│  Select Family Member                   │
+│  ┌───────────────────────────────────┐ │
+│  │ Sarah                           ▼ │ │
+│  └───────────────────────────────────┘ │
 │                                         │
 ├─────────────────────────────────────────┤
 │  ATTENDANCE INSIGHTS                    │
@@ -736,12 +744,13 @@ Add schedule to see value analysis
 
 ```
 ┌─────────────────────────────────────────┐
-│  Analytics                        [≡]   │
+│  Insights                         [≡]   │
 ├─────────────────────────────────────────┤
 │                                         │
-│  [All Family ▼] [Sarah] [Tom] [Mom]    │
-│   ^^^^^^^^^^^                           │
-│   selected                              │
+│  Select Family Member                   │
+│  ┌───────────────────────────────────┐ │
+│  │ All Family                      ▼ │ │
+│  └───────────────────────────────────┘ │
 │                                         │
 ├─────────────────────────────────────────┤
 │  FAMILY ATTENDANCE                      │
@@ -817,7 +826,7 @@ Add schedule to see value analysis
 ### Data Fetching Strategy
 
 ```typescript
-interface AnalyticsData {
+interface InsightsData {
   familyMembers: FamilyMember[];
   classes: Class[];
   allAttendance: ClassAttendance[];
@@ -825,7 +834,7 @@ interface AnalyticsData {
   subscriptions: ClassSubscription[];
 }
 
-async function loadAnalyticsData(): Promise<AnalyticsData> {
+async function loadInsightsData(): Promise<InsightsData> {
   const [
     familyMembers,
     classes,
@@ -855,7 +864,7 @@ async function loadAnalyticsData(): Promise<AnalyticsData> {
 ```typescript
 // Filter data by selected member
 function filterByMember(
-  data: AnalyticsData,
+  data: InsightsData,
   memberId: string | null
 ): FilteredData {
   if (!memberId) return data; // Family view
@@ -1054,15 +1063,15 @@ function getAtRiskClasses(
 ### State Management
 
 ```typescript
-interface AnalyticsState {
+interface InsightsState {
   selectedMemberId: string | null;
-  data: AnalyticsData | null;
+  data: InsightsData | null;
   loading: boolean;
   error: string | null;
 }
 
 // Zustand store
-const useAnalyticsStore = create<AnalyticsState>((set) => ({
+const useInsightsStore = create<InsightsState>((set) => ({
   selectedMemberId: null,
   data: null,
   loading: false,
@@ -1074,7 +1083,7 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
   loadData: async () => {
     set({ loading: true, error: null });
     try {
-      const data = await loadAnalyticsData();
+      const data = await loadInsightsData();
       set({ data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -1093,7 +1102,8 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
 |---------|-------|
 | Primary cards | White (#FFFFFF) |
 | Background | Light gray (#F9FAFB) |
-| Selected chip | Blue (#2563EB) |
+| Dropdown border | Blue (#2563EB) |
+| Dropdown text | Dark gray (#1F2937) |
 | Positive trend | Green (#10B981) |
 | Negative trend | Red (#EF4444) |
 | Neutral | Gray (#6B7280) |
@@ -1122,7 +1132,7 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
 
 - **Trend arrows:** Subtle bounce on render
 - **Bar charts:** Animate height from 0 to final
-- **Member selector:** Smooth horizontal scroll
+- **Dropdown:** Slide up from bottom (bottom sheet) with fade-in backdrop
 - **Data refresh:** Fade out/in transition
 
 ---
@@ -1182,7 +1192,8 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
 
 ### E2E Tests
 
-- [ ] Load analytics → See family view
+- [ ] Load insights → See family view
+- [ ] Open dropdown → See member options
 - [ ] Select member → See individual view
 - [ ] Refresh data → Metrics update
 - [ ] Navigate back → Selection persists
@@ -1193,9 +1204,9 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
 
 ### Engagement
 
-- **Analytics View Rate:** % of users who view analytics tab (target: 60%+)
+- **Insights View Rate:** % of users who view insights tab (target: 60%+)
 - **Member Selection Rate:** % who filter by individual member (target: 40%+)
-- **Session Time:** Avg time spent on analytics (target: 45+ seconds)
+- **Session Time:** Avg time spent on insights (target: 45+ seconds)
 
 ### Actionability
 
@@ -1211,12 +1222,12 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
 
 ## Future Enhancements
 
-### Phase 2: Advanced Analytics
+### Phase 2: Advanced Insights
 
 - **Attendance Heatmap:** Visual calendar showing attendance patterns
 - **Spending Forecast:** Predict next month spending based on trends
 - **Class Comparison:** Compare similar classes (e.g., all music classes)
-- **Export Reports:** PDF/CSV of analytics data
+- **Export Reports:** PDF/CSV of insights data
 
 ### Phase 3: Predictive Insights
 
@@ -1244,7 +1255,7 @@ const useAnalyticsStore = create<AnalyticsState>((set) => ({
 3. **Multiple Family Accounts:** How to handle if parents share account?
    - **Decision:** Phase 3 feature, for now assume single user
 
-4. **Class Archive:** Should archived/deleted classes show in analytics?
+4. **Class Archive:** Should archived/deleted classes show in insights?
    - **Decision:** No, only active classes unless specifically viewing history
 
 ---
@@ -1290,6 +1301,7 @@ ORDER BY created_at ASC;
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-12-12 | 1.0 | Initial PRD created | - |
+| 2025-12-12 | 1.1 | Renamed from "Analytics" to "Insights"; Changed selector from horizontal scrollable chips to dropdown | - |
 
 ---
 
@@ -1300,11 +1312,13 @@ ORDER BY created_at ASC;
 #### Individual View - Collapsed
 ```
 ┌────────────────────┐
-│  Analytics    [≡]  │
+│  Insights     [≡]  │
 ├────────────────────┤
 │                    │
-│ [All] [Sarah] [Tom]│
-│       ^^^^^^       │
+│ Select Member      │
+│ ┌────────────────┐ │
+│ │ Sarah        ▼ │ │
+│ └────────────────┘ │
 │                    │
 │ ATTENDANCE ▼       │
 │ ┌────┐ ┌────┐     │
@@ -1331,11 +1345,13 @@ ORDER BY created_at ASC;
 #### Family View - Collapsed
 ```
 ┌────────────────────┐
-│  Analytics    [≡]  │
+│  Insights     [≡]  │
 ├────────────────────┤
 │                    │
-│ [All Family ▼]     │
-│  ^^^^^^^^^^^       │
+│ Select Member      │
+│ ┌────────────────┐ │
+│ │ All Family   ▼ │ │
+│ └────────────────┘ │
 │                    │
 │ ATTENDANCE ▼       │
 │                    │
@@ -1366,4 +1382,4 @@ ORDER BY created_at ASC;
 
 ## Conclusion
 
-The Analytics screen provides progressive insights that adapt to available data, helping users understand both attendance patterns and spending across their family's classes. By offering both individual deep-dives and family-level comparisons, it serves multiple use cases while maintaining simplicity and clarity.
+The Insights screen provides progressive, actionable data that adapts to available information, helping users understand both attendance patterns and spending across their family's classes. By offering both individual deep-dives and family-level comparisons through a simple dropdown selector, it serves multiple use cases while maintaining simplicity and clarity.
