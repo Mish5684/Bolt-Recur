@@ -263,18 +263,26 @@ export default function InsightsScreen({ navigation }: any) {
 
                   <View style={styles.chartCard}>
                     <Text style={styles.chartTitle}>Monthly Spending (Last 6 Months)</Text>
-                    <View style={styles.barChart}>
-                      {spendingTrend.map((item, index) => {
-                        const barHeight = maxSpending > 0 ? (item.amount / maxSpending) * 80 : 4;
-                        return (
-                          <View key={index} style={styles.barContainer}>
-                            <View style={styles.barWrapper}>
-                              <View style={[styles.bar, { height: barHeight || 4 }]} />
+                    <View style={styles.chartContainer}>
+                      <View style={styles.yAxisLabels}>
+                        <Text style={styles.yAxisLabel}>{currency}{maxSpending.toFixed(0)}</Text>
+                        <Text style={styles.yAxisLabel}>{currency}{(maxSpending * 0.5).toFixed(0)}</Text>
+                        <Text style={styles.yAxisLabel}>0</Text>
+                      </View>
+                      <View style={styles.barChart}>
+                        {spendingTrend.map((item, index) => {
+                          const barHeight = maxSpending > 0 ? (item.amount / maxSpending) * 80 : 4;
+                          return (
+                            <View key={index} style={styles.barContainer}>
+                              <View style={styles.barWrapper}>
+                                <View style={[styles.bar, { height: barHeight || 4 }]} />
+                              </View>
+                              <Text style={styles.barLabel}>{item.month}</Text>
+                              <Text style={styles.barValue}>{currency}{item.amount.toFixed(0)}</Text>
                             </View>
-                            <Text style={styles.barLabel}>{item.month}</Text>
-                          </View>
-                        );
-                      })}
+                          );
+                        })}
+                      </View>
                     </View>
                   </View>
 
@@ -360,18 +368,26 @@ export default function InsightsScreen({ navigation }: any) {
                 <>
                   <View style={styles.chartCard}>
                     <Text style={styles.chartTitle}>Attendance Trend (Last 6 Months)</Text>
-                    <View style={styles.barChart}>
-                      {attendanceTrend.map((item, index) => {
-                        const barHeight = maxAttendance > 0 ? (item.count / maxAttendance) * 80 : 4;
-                        return (
-                          <View key={index} style={styles.barContainer}>
-                            <View style={styles.barWrapper}>
-                              <View style={[styles.bar, { height: barHeight || 4 }]} />
+                    <View style={styles.chartContainer}>
+                      <View style={styles.yAxisLabels}>
+                        <Text style={styles.yAxisLabel}>{maxAttendance}</Text>
+                        <Text style={styles.yAxisLabel}>{Math.round(maxAttendance * 0.5)}</Text>
+                        <Text style={styles.yAxisLabel}>0</Text>
+                      </View>
+                      <View style={styles.barChart}>
+                        {attendanceTrend.map((item, index) => {
+                          const barHeight = maxAttendance > 0 ? (item.count / maxAttendance) * 80 : 4;
+                          return (
+                            <View key={index} style={styles.barContainer}>
+                              <View style={styles.barWrapper}>
+                                <View style={[styles.bar, { height: barHeight || 4 }]} />
+                              </View>
+                              <Text style={styles.barLabel}>{item.month}</Text>
+                              <Text style={styles.barValue}>{item.count}</Text>
                             </View>
-                            <Text style={styles.barLabel}>{item.month}</Text>
-                          </View>
-                        );
-                      })}
+                          );
+                        })}
+                      </View>
                     </View>
                   </View>
 
@@ -608,7 +624,22 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
   },
+  chartContainer: {
+    flexDirection: 'row',
+  },
+  yAxisLabels: {
+    justifyContent: 'space-between',
+    height: 100,
+    paddingVertical: 0,
+    marginRight: 8,
+  },
+  yAxisLabel: {
+    fontSize: 9,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   barChart: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-around',
@@ -634,6 +665,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6B7280',
     marginTop: 4,
+  },
+  barValue: {
+    fontSize: 9,
+    color: '#1F2937',
+    fontWeight: '600',
+    marginTop: 2,
   },
   actionButton: {
     backgroundColor: '#2563EB',

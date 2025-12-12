@@ -180,9 +180,17 @@ export const useRecur = create<RecurStore>((set, get) => ({
 
   fetchAllAttendance: async () => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('No authenticated user found:', userError);
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('class_attendance')
         .select('*')
+        .eq('user_id', user.id)
         .order('class_date', { ascending: false });
 
       if (error) throw error;
@@ -195,9 +203,17 @@ export const useRecur = create<RecurStore>((set, get) => ({
 
   fetchAllPayments: async () => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('No authenticated user found:', userError);
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('payments')
         .select('*')
+        .eq('user_id', user.id)
         .order('payment_date', { ascending: false });
 
       if (error) throw error;
