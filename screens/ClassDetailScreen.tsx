@@ -433,6 +433,12 @@ export default function ClassDetailScreen({ route, navigation }: any) {
           {payments.length === 0 && (
             <View style={styles.emptyPaymentContainer}>
               <Text style={styles.emptyText}>No payment records yet</Text>
+              <TouchableOpacity
+                style={styles.recordPaymentButton}
+                onPress={handleRecordPayment}
+              >
+                <Text style={styles.recordPaymentButtonText}>Record Payment</Text>
+              </TouchableOpacity>
             </View>
           )}
           {payments.length > 0 && (
@@ -775,6 +781,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  recordPaymentButton: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 12,
+    minWidth: 180,
+    alignItems: 'center',
+  },
+  recordPaymentButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   addMissingButton: {
     marginTop: 12,
