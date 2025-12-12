@@ -8,27 +8,27 @@ status: Draft
 # Insights Screen - Product Requirements Document
 
 ## Overview
-The Insights screen provides focused, actionable data about attendance trends and spending overview across family members. It features a simplified design with two core sections and elegant data-entry nudges, offering both individual and family-level views through a dropdown selector.
+The Insights screen provides focused, actionable data about spending and attendance across family members, prioritizing financial tracking as the primary user concern. It features a simplified design with two core sections and elegant data-entry nudges, offering both individual and family-level views through a dropdown selector.
 
 ---
 
 ## Core Jobs To Be Done
 
-### JTBD 1: Help me see attendance trends at a glance
-**User Need:** "Show me attendance patterns over time - who's attending regularly?"
-
-**Value:**
-- View 6-month attendance trends for quick pattern recognition
-- Compare family members' attendance side-by-side
-- Quick access to add missing attendance records
-
-### JTBD 2: Help me track spending across my family
+### JTBD 1: Help me track spending across my family
 **User Need:** "Where is my money going each month?"
 
 **Value:**
 - Track monthly and yearly spending at a glance
 - See spending distribution across family members
 - Quick access to record missing payments for complete tracking
+
+### JTBD 2: Help me see attendance trends at a glance
+**User Need:** "Show me attendance patterns over time - who's attending regularly?"
+
+**Value:**
+- View 6-month attendance trends for quick pattern recognition
+- Compare family members' attendance side-by-side
+- Quick access to add missing attendance records
 
 ---
 
@@ -105,9 +105,183 @@ interface ClassSubscription {
 
 ---
 
-## JTBD 1: Attendance Insights
+## JTBD 1: Spending Insights
 
-### Section A: Attendance Overview
+### Section A: Spending Overview
+
+#### Individual Member View
+
+```
+┌─────────────────────────────────────────┐
+│  Sarah - Spending Overview              │
+├─────────────────────────────────────────┤
+│                                         │
+│  ┌────────────┐  ┌────────────┐        │
+│  │This Month  │  │This Year   │        │
+│  │ $1,200     │  │  $12,000   │        │
+│  └────────────┘  └────────────┘        │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │  Monthly Spending (Last 6 Months) │ │
+│  │                                   │ │
+│  │      ▂▄▆▅█▇                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │  Add Any Missing Payment Records  │ │
+│  │  for Complete Spend Analysis      │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Data Displayed:**
+- **This Month:** Sum of payments made this month
+- **This Year:** Sum of payments made this calendar year
+- **Spending Trend:** Bar chart of monthly spending (last 6 months)
+- **Add Missing Payments Button:** Navigates to individual's detail page for complete spend tracking
+
+**Calculations:**
+```javascript
+// This Month
+const thisMonthSpending = payments
+  .filter(p => isSameMonth(new Date(p.payment_date), new Date()))
+  .reduce((sum, p) => sum + p.amount, 0);
+
+// This Year
+const thisYearSpending = payments
+  .filter(p => isSameYear(new Date(p.payment_date), new Date()))
+  .reduce((sum, p) => sum + p.amount, 0);
+
+// Monthly Trend
+const months = eachMonthOfInterval({
+  start: subMonths(new Date(), 5),
+  end: new Date()
+});
+
+const spendingTrend = months.map(month => ({
+  month: format(month, 'MMM'),
+  amount: payments
+    .filter(p => isSameMonth(new Date(p.payment_date), month))
+    .reduce((sum, p) => sum + p.amount, 0)
+}));
+```
+
+**Navigation:**
+- "Add Any Missing Payment Records" button navigates to the individual's detail page
+- This provides a streamlined path to complete payment tracking for comprehensive spend analysis
+
+**Missing Data Nudges:**
+```
+┌─────────────────────────────────────────┐
+│  No payment data yet                    │
+│                                         │
+│  Record payments to track:              │
+│  • Monthly spending                     │
+│  • Yearly totals                        │
+│  • Cost per class                       │
+│                                         │
+│  [Record Payment] button                │
+└─────────────────────────────────────────┘
+```
+
+#### Family View
+
+```
+┌─────────────────────────────────────────┐
+│  Family Spending Overview               │
+├─────────────────────────────────────────┤
+│                                         │
+│  ┌────────────┐  ┌────────────┐        │
+│  │This Month  │  │This Year   │        │
+│  │ $2,400     │  │  $28,000   │        │
+│  └────────────┘  └────────────┘        │
+│                                         │
+│  Spending by Member                     │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │ 👧 Sarah                          │ │
+│  │ $1,200 (50%)                      │ │
+│  │ ━━━━━━━━━━━━━━━━━━━━━━━━       │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │ 👦 Tom                            │ │
+│  │ $800 (33%)                        │ │
+│  │ ━━━━━━━━━━━━━━━━               │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │ 👩 Mom                            │ │
+│  │ $400 (17%)                        │ │
+│  │ ━━━━━━━━                        │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Key Insight:** Family view shows TOTALS for spending (unlike attendance which shows comparison)
+
+**Data Displayed:**
+- Total family spending this month
+- Total family spending this year
+- Per-member spending breakdown with percentages
+- Visual bars showing relative distribution
+- Compact "Add missing payments" link button for each member
+- Sorted by spending amount (highest first)
+
+**Button Design:**
+- Styled as a subtle text link with "+" icon prefix
+- Appears below each member's spending bar in a light gray color
+- Tapping navigates to that member's detail page for payment entry
+- Minimal visual weight to avoid cluttering the overview
+
+**Calculations:**
+```javascript
+// Family totals
+const familyThisMonth = allPayments
+  .filter(p => isSameMonth(new Date(p.payment_date), new Date()))
+  .reduce((sum, p) => sum + p.amount, 0);
+
+const familyThisYear = allPayments
+  .filter(p => isSameYear(new Date(p.payment_date), new Date()))
+  .reduce((sum, p) => sum + p.amount, 0);
+
+// Per-member breakdown
+const memberSpending = familyMembers.map(member => {
+  const memberPayments = allPayments
+    .filter(p => p.family_member_id === member.id)
+    .filter(p => isSameMonth(new Date(p.payment_date), new Date()));
+
+  const total = memberPayments.reduce((sum, p) => sum + p.amount, 0);
+  const percentage = familyThisMonth > 0 ? (total / familyThisMonth) * 100 : 0;
+
+  return {
+    name: member.name,
+    avatar: member.avatar,
+    amount: total,
+    percentage
+  };
+}).filter(m => m.amount > 0)
+  .sort((a, b) => b.amount - a.amount);
+```
+
+**Navigation:**
+- Each "Add missing payments" link navigates to that specific family member's detail page
+- This provides quick access to record payments for any family member from the spending overview
+
+---
+
+## JTBD 2: Attendance Insights
+
+### Section B: Attendance Overview
 
 #### Individual Member View
 
@@ -271,12 +445,6 @@ const memberTrendData = months.map(month => ({
 **Navigation:**
 - Each "Add any missing attendance for <member name>" button navigates to that specific family member's class detail page
 - This provides quick access to mark attendance for any family member from the comparison view
-
----
-
-## JTBD 2: Spending Insights
-
-### Section D: Spending Overview
 
 #### Individual Member View
 
@@ -452,11 +620,11 @@ const memberSpending = familyMembers.map(member => {
 
 ### Scenario Matrix
 
-| Has Attendance | Has Payments | What Shows |
-|---------------|--------------|------------|
-| ✅ | ❌ | Attendance trends, "Add Missing Payments" button |
-| ❌ | ✅ | Spending overview, "Add Missing Attendance" button |
-| ✅ | ✅ | Full insights: attendance trends + spending overview |
+| Has Payments | Has Attendance | What Shows |
+|--------------|----------------|------------|
+| ✅ | ❌ | Spending overview, "Add Missing Attendance" button |
+| ❌ | ✅ | Attendance trends, "Add Missing Payments" button |
+| ✅ | ✅ | Full insights: spending overview + attendance trends |
 | ❌ | ❌ | Empty state with prompts to add data |
 
 ### Empty State Hierarchy
@@ -518,20 +686,6 @@ const memberSpending = familyMembers.map(member => {
 │  └───────────────────────────────────┘ │
 │                                         │
 ├─────────────────────────────────────────┤
-│  ATTENDANCE INSIGHTS                    │
-├─────────────────────────────────────────┤
-│                                         │
-│  Attendance Trend (Last 6 Months)       │
-│  ┌───────────────────────────────────┐ │
-│  │      ▂▄▆▇█▇                       │ │
-│  │  Jul Aug Sep Oct Nov Dec          │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │    Add Missing Attendance         │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-├─────────────────────────────────────────┤
 │  SPENDING INSIGHTS                      │
 ├─────────────────────────────────────────┤
 │                                         │
@@ -551,6 +705,20 @@ const memberSpending = familyMembers.map(member => {
 │  │  for Complete Spend Analysis      │ │
 │  └───────────────────────────────────┘ │
 │                                         │
+├─────────────────────────────────────────┤
+│  ATTENDANCE INSIGHTS                    │
+├─────────────────────────────────────────┤
+│                                         │
+│  Attendance Trend (Last 6 Months)       │
+│  ┌───────────────────────────────────┐ │
+│  │      ▂▄▆▇█▇                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │    Add Missing Attendance         │ │
+│  └───────────────────────────────────┘ │
+│                                         │
 └─────────────────────────────────────────┘
 ```
 
@@ -564,6 +732,41 @@ const memberSpending = familyMembers.map(member => {
 │  Select Family Member                   │
 │  ┌───────────────────────────────────┐ │
 │  │ All Family                      ▼ │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+├─────────────────────────────────────────┤
+│  FAMILY SPENDING                        │
+├─────────────────────────────────────────┤
+│                                         │
+│  ┌────────────┐  ┌────────────┐        │
+│  │This Month  │  │This Year   │        │
+│  │  $2,400    │  │  $28,000   │        │
+│  └────────────┘  └────────────┘        │
+│                                         │
+│  Spending by Member                     │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │ 👧 Sarah                          │ │
+│  │ $1,200 (50%)                      │ │
+│  │ ━━━━━━━━━━━━━━━━━━━━━━━━       │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │ 👦 Tom                            │ │
+│  │ $800 (33%)                        │ │
+│  │ ━━━━━━━━━━━━━━━━               │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │ 👩 Mom                            │ │
+│  │ $400 (17%)                        │ │
+│  │ ━━━━━━━━                        │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 ├─────────────────────────────────────────┤
@@ -609,41 +812,6 @@ const memberSpending = familyMembers.map(member => {
 │  │ │ Add any missing attendance    │ │ │
 │  │ │ for Mom                       │ │ │
 │  │ └───────────────────────────────┘ │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-├─────────────────────────────────────────┤
-│  FAMILY SPENDING                        │
-├─────────────────────────────────────────┤
-│                                         │
-│  ┌────────────┐  ┌────────────┐        │
-│  │This Month  │  │This Year   │        │
-│  │  $2,400    │  │  $28,000   │        │
-│  └────────────┘  └────────────┘        │
-│                                         │
-│  Spending by Member                     │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 👧 Sarah                          │ │
-│  │ $1,200 (50%)                      │ │
-│  │ ━━━━━━━━━━━━━━━━━━━━━━━━       │ │
-│  │                                   │ │
-│  │ [+ Add missing payments]          │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 👦 Tom                            │ │
-│  │ $800 (33%)                        │ │
-│  │ ━━━━━━━━━━━━━━━━               │ │
-│  │                                   │ │
-│  │ [+ Add missing payments]          │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 👩 Mom                            │ │
-│  │ $400 (17%)                        │ │
-│  │ ━━━━━━━━                        │ │
-│  │                                   │ │
-│  │ [+ Add missing payments]          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
@@ -1122,6 +1290,7 @@ ORDER BY created_at ASC;
 | 2025-12-12 | 1.3 | Added "Add Missing Attendance" button below attendance trend chart; Updated empty state with "Mark Attendance" button and clearer CTA text | - |
 | 2025-12-12 | 1.4 | Updated Family View to show 6-month trend chart for each member; Added generic "Add any missing attendance for <member name>" button for all members regardless of data availability | - |
 | 2025-12-12 | 1.5 | Simplified screen structure: Removed sections B (Per-Class Breakdown), C (At-Risk Classes), E (Spending by Class), and F (Value Analysis); Removed cost/class widget from Section D; Added "Add Any Missing Payment Records" button in Individual View; Added elegant "Add missing payments" link for each member in Family View spending section | - |
+| 2025-12-12 | 1.6 | Reordered sections to prioritize spending: Section A is now Spending Overview, Section B is now Attendance Overview; Updated JTBD order and all wireframes to show spending before attendance throughout the PRD | - |
 
 ---
 
@@ -1140,14 +1309,6 @@ ORDER BY created_at ASC;
 │ │ Sarah        ▼ │ │
 │ └────────────────┘ │
 │                    │
-│ ATTENDANCE ▼       │
-│                    │
-│ [Trend Chart]      │
-│ (Last 6 Months)    │
-│                    │
-│ [Add Missing       │
-│  Attendance]       │
-│                    │
 │ SPENDING ▼         │
 │ ┌────────┐         │
 │ │ $1,200 │         │
@@ -1160,6 +1321,14 @@ ORDER BY created_at ASC;
 │                    │
 │ [Add Missing       │
 │  Payment Records]  │
+│                    │
+│ ATTENDANCE ▼       │
+│                    │
+│ [Trend Chart]      │
+│ (Last 6 Months)    │
+│                    │
+│ [Add Missing       │
+│  Attendance]       │
 │                    │
 └────────────────────┘
 ```
@@ -1174,6 +1343,33 @@ ORDER BY created_at ASC;
 │ ┌────────────────┐ │
 │ │ All Family   ▼ │ │
 │ └────────────────┘ │
+│                    │
+│ SPENDING ▼         │
+│ Total: $2,400      │
+│                    │
+│ ┌──────────────┐   │
+│ │ 👧 Sarah     │   │
+│ │ $1,200 (50%) │   │
+│ │ ━━━━━━━━━━  │   │
+│ │ + Add missing│   │
+│ │   payments   │   │
+│ └──────────────┘   │
+│                    │
+│ ┌──────────────┐   │
+│ │ 👦 Tom       │   │
+│ │ $800 (33%)   │   │
+│ │ ━━━━━━━     │   │
+│ │ + Add missing│   │
+│ │   payments   │   │
+│ └──────────────┘   │
+│                    │
+│ ┌──────────────┐   │
+│ │ 👩 Mom       │   │
+│ │ $400 (17%)   │   │
+│ │ ━━━━        │   │
+│ │ + Add missing│   │
+│ │   payments   │   │
+│ └──────────────┘   │
 │                    │
 │ ATTENDANCE ▼       │
 │                    │
@@ -1209,33 +1405,6 @@ ORDER BY created_at ASC;
 │ │ Mom            │ │
 │ └────────────────┘ │
 │                    │
-│ SPENDING ▼         │
-│ Total: $2,400      │
-│                    │
-│ ┌──────────────┐   │
-│ │ 👧 Sarah     │   │
-│ │ $1,200 (50%) │   │
-│ │ ━━━━━━━━━━  │   │
-│ │ + Add missing│   │
-│ │   payments   │   │
-│ └──────────────┘   │
-│                    │
-│ ┌──────────────┐   │
-│ │ 👦 Tom       │   │
-│ │ $800 (33%)   │   │
-│ │ ━━━━━━━     │   │
-│ │ + Add missing│   │
-│ │   payments   │   │
-│ └──────────────┘   │
-│                    │
-│ ┌──────────────┐   │
-│ │ 👩 Mom       │   │
-│ │ $400 (17%)   │   │
-│ │ ━━━━        │   │
-│ │ + Add missing│   │
-│ │   payments   │   │
-│ └──────────────┘   │
-│                    │
 └────────────────────┘
 ```
 
@@ -1243,4 +1412,4 @@ ORDER BY created_at ASC;
 
 ## Conclusion
 
-The Insights screen provides focused, actionable data about attendance and spending. The simplified design emphasizes two key metrics (attendance trends and spending overview) with direct paths to add missing data through elegant, contextual buttons. By offering both individual and family-level views through a simple dropdown selector, it serves multiple use cases while maintaining clarity and avoiding information overload.
+The Insights screen provides focused, actionable data about spending and attendance, prioritizing financial tracking as the primary user concern. The simplified design emphasizes two key metrics (spending overview and attendance trends) with direct paths to add missing data through elegant, contextual buttons. By offering both individual and family-level views through a simple dropdown selector, it serves multiple use cases while maintaining clarity and avoiding information overload.
