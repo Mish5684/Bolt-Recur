@@ -8,29 +8,27 @@ status: Draft
 # Insights Screen - Product Requirements Document
 
 ## Overview
-The Insights screen provides actionable data about attendance patterns and spending across family members and classes. It adapts intelligently to available data (attendance, schedule, payments) and offers both individual and family-level views.
+The Insights screen provides focused, actionable data about attendance trends and spending overview across family members. It features a simplified design with two core sections and elegant data-entry nudges, offering both individual and family-level views through a dropdown selector.
 
 ---
 
 ## Core Jobs To Be Done
 
-### JTBD 1: Help me see who's attending what and spot patterns
-**User Need:** "Show me attendance patterns - who's consistent, who's dropping off, which classes are neglected"
+### JTBD 1: Help me see attendance trends at a glance
+**User Need:** "Show me attendance patterns over time - who's attending regularly?"
 
 **Value:**
-- Identify engagement issues before they become problems
-- Understand attendance trends over time
-- Compare family members' participation
-- Find classes that haven't been attended recently
+- View 6-month attendance trends for quick pattern recognition
+- Compare family members' attendance side-by-side
+- Quick access to add missing attendance records
 
-### JTBD 2: Help me understand my spending and if I'm getting value
-**User Need:** "Where's my money going? Am I getting my money's worth?"
+### JTBD 2: Help me track spending across my family
+**User Need:** "Where is my money going each month?"
 
 **Value:**
-- Track spending across classes and family members
-- Calculate actual cost per class attended
-- Identify value opportunities (high spend, low attendance)
-- Make informed decisions about class investments
+- Track monthly and yearly spending at a glance
+- See spending distribution across family members
+- Quick access to record missing payments for complete tracking
 
 ---
 
@@ -276,122 +274,6 @@ const memberTrendData = months.map(month => ({
 
 ---
 
-### Section B: Per-Class Breakdown (Individual View Only)
-
-```
-┌─────────────────────────────────────────┐
-│  Sarah's Classes                        │
-├─────────────────────────────────────────┤
-│                                         │
-│  🎹 Piano Lessons                       │
-│  Last attended: 2 days ago ✅           │
-│  This month: 6 classes                  │
-│  [If schedule] Attendance: 6/8 (75%)   │
-│  [If schedule] Missed: Dec 5, Dec 9     │
-│                                         │
-│  ─────────────────────────────────      │
-│                                         │
-│  🏊 Swimming                            │
-│  Last attended: 45 days ago ⚠️          │
-│  This month: 0 classes                  │
-│  [If schedule] Attendance: 0/8 (0%)    │
-│  [If schedule] Missing all classes!     │
-│                                         │
-│  ─────────────────────────────────      │
-│                                         │
-│  💃 Dance (no schedule set)             │
-│  Last attended: 2 days ago ✅           │
-│  This month: 12 classes                 │
-│  Frequency: ~3x per week                │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-**Visual Indicators:**
-- ✅ Green dot: Attended within last 7 days
-- ⚠️ Amber dot: Not attended for 14-30 days
-- 🔴 Red dot: Not attended for 30+ days
-
-**Data Displayed Per Class:**
-
-**Always Shown (requires only attendance):**
-- Days since last attended
-- Count this month
-- Frequency calculation (if no schedule)
-
-**Enhanced with Schedule:**
-- Attendance rate (attended / scheduled)
-- Specific missed dates
-- Warning if missing many classes
-
-**Calculations:**
-```javascript
-// Days since last attended
-const lastAttendance = maxBy(attendanceRecords, 'class_date');
-const daysSince = differenceInDays(new Date(), new Date(lastAttendance.class_date));
-
-// This month count
-const thisMonthCount = attendanceRecords.filter(a =>
-  isSameMonth(new Date(a.class_date), new Date())
-).length;
-
-// Frequency (no schedule)
-const avgPerWeek = thisMonthCount / (daysInMonth(new Date()) / 7);
-
-// Attendance rate (with schedule)
-if (classSchedule) {
-  const scheduledDays = getScheduledDaysInMonth(classSchedule, new Date());
-  const attendedDays = attendanceRecords.filter(a =>
-    isSameMonth(new Date(a.class_date), new Date())
-  ).length;
-  const rate = (attendedDays / scheduledDays.length) * 100;
-
-  // Find missed dates
-  const missedDates = scheduledDays.filter(scheduledDate =>
-    !attendanceRecords.some(a =>
-      isSameDay(new Date(a.class_date), scheduledDate)
-    )
-  );
-}
-```
-
-**Missing Data Nudges:**
-```
-Add schedule to see:
-• Attendance rate
-• Missed classes
-• Upcoming sessions
-```
-
----
-
-### Section C: At-Risk Classes (Family View Only)
-
-```
-┌─────────────────────────────────────────┐
-│  Classes Needing Attention              │
-├─────────────────────────────────────────┤
-│                                         │
-│  🔴 Swimming (Tom)                      │
-│  Last attended: 45 days ago             │
-│  This month: 0/8 classes                │
-│                                         │
-│  🟡 Piano (Sarah)                       │
-│  Last attended: 14 days ago             │
-│  This month: 2/8 classes (25%)          │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-**Logic:**
-- Shows classes with low attendance or long gaps
-- Prioritized by severity:
-  1. 🔴 Not attended in 30+ days
-  2. 🟡 Not attended in 14-30 days OR < 50% attendance rate
-- Empty state: "All classes have good attendance!"
-
----
-
 ## JTBD 2: Spending Insights
 
 ### Section D: Spending Overview
@@ -415,11 +297,10 @@ Add schedule to see:
 │  │  Jul Aug Sep Oct Nov Dec          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
-│  [If attendance exists]                │
-│  ┌────────────┐                        │
-│  │Cost/Class  │                        │
-│  │   $50      │                        │
-│  └────────────┘                        │
+│  ┌───────────────────────────────────┐ │
+│  │  Add Any Missing Payment Records  │ │
+│  │  for Complete Spend Analysis      │ │
+│  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -428,7 +309,7 @@ Add schedule to see:
 - **This Month:** Sum of payments made this month
 - **This Year:** Sum of payments made this calendar year
 - **Spending Trend:** Bar chart of monthly spending (last 6 months)
-- **Cost per Class:** Only shown if attendance data exists
+- **Add Missing Payments Button:** Navigates to individual's detail page for complete spend tracking
 
 **Calculations:**
 ```javascript
@@ -454,17 +335,11 @@ const spendingTrend = months.map(month => ({
     .filter(p => isSameMonth(new Date(p.payment_date), month))
     .reduce((sum, p) => sum + p.amount, 0)
 }));
-
-// Cost per class (if attendance exists)
-if (attendanceRecords.length > 0) {
-  const totalSpent = thisYearSpending;
-  const totalAttended = attendanceRecords.filter(a =>
-    isSameYear(new Date(a.class_date), new Date())
-  ).length;
-
-  const costPerClass = totalAttended > 0 ? totalSpent / totalAttended : 0;
-}
 ```
+
+**Navigation:**
+- "Add Any Missing Payment Records" button navigates to the individual's detail page
+- This provides a streamlined path to complete payment tracking for comprehensive spend analysis
 
 **Missing Data Nudges:**
 ```
@@ -494,14 +369,29 @@ if (attendanceRecords.length > 0) {
 │                                         │
 │  Spending by Member                     │
 │                                         │
-│  👧 Sarah: $1,200 (50%)                │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━            │
+│  ┌───────────────────────────────────┐ │
+│  │ 👧 Sarah                          │ │
+│  │ $1,200 (50%)                      │ │
+│  │ ━━━━━━━━━━━━━━━━━━━━━━━━       │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
 │                                         │
-│  👦 Tom: $800 (33%)                    │
-│  ━━━━━━━━━━━━━━━━                     │
+│  ┌───────────────────────────────────┐ │
+│  │ 👦 Tom                            │ │
+│  │ $800 (33%)                        │ │
+│  │ ━━━━━━━━━━━━━━━━               │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
 │                                         │
-│  👩 Mom: $400 (17%)                    │
-│  ━━━━━━━━                             │
+│  ┌───────────────────────────────────┐ │
+│  │ 👩 Mom                            │ │
+│  │ $400 (17%)                        │ │
+│  │ ━━━━━━━━                        │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
+│  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -513,7 +403,14 @@ if (attendanceRecords.length > 0) {
 - Total family spending this year
 - Per-member spending breakdown with percentages
 - Visual bars showing relative distribution
+- Compact "Add missing payments" link button for each member
 - Sorted by spending amount (highest first)
+
+**Button Design:**
+- Styled as a subtle text link with "+" icon prefix
+- Appears below each member's spending bar in a light gray color
+- Tapping navigates to that member's detail page for payment entry
+- Minimal visual weight to avoid cluttering the overview
 
 **Calculations:**
 ```javascript
@@ -545,111 +442,9 @@ const memberSpending = familyMembers.map(member => {
   .sort((a, b) => b.amount - a.amount);
 ```
 
----
-
-### Section E: Spending by Class (Individual View Only)
-
-```
-┌─────────────────────────────────────────┐
-│  Sarah's Class Spending                 │
-├─────────────────────────────────────────┤
-│                                         │
-│  🎹 Piano Lessons                       │
-│  This month: $600                       │
-│  This year: $6,000                      │
-│  [If attendance] Cost/class: $50        │
-│  [If schedule + attendance] ROI: Good   │
-│      (6/8 classes, $50 vs $45 expected) │
-│                                         │
-│  ─────────────────────────────────      │
-│                                         │
-│  🏊 Swimming                            │
-│  This month: $320                       │
-│  This year: $3,200                      │
-│  [If attendance] Cost/class: $—         │
-│      (No attendance tracked)            │
-│  ⚠️ Spending but not attending!         │
-│                                         │
-│  ─────────────────────────────────      │
-│                                         │
-│  💃 Dance (no payments tracked)         │
-│  Add payment info to see spending       │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-**Data Per Class:**
-
-**Always Shown (if payments exist):**
-- Spending this month
-- Spending this year
-
-**Enhanced with Attendance:**
-- Actual cost per class (total spent / total attended)
-- Warning if spending but no attendance
-
-**Enhanced with Schedule + Attendance + Payments:**
-- ROI calculation comparing actual vs expected cost
-- Attendance rate impact on value
-
-**ROI Calculation:**
-```javascript
-// Expected cost per class (from subscription setup)
-const expectedCost = totalPaid / classesPaid;
-
-// Actual cost per class
-const actualCost = totalSpent / totalAttended;
-
-// ROI Assessment
-if (actualCost <= expectedCost) {
-  roi = "Good - getting expected value";
-} else if (actualCost <= expectedCost * 1.2) {
-  roi = "Fair - attending most classes";
-} else {
-  roi = "Poor - missing too many classes";
-}
-
-// If schedule exists, show attendance context
-if (schedule) {
-  const rate = (totalAttended / totalScheduled) * 100;
-  roi += ` (${rate}% attendance)`;
-}
-```
-
-**Missing Data Nudges:**
-```
-Add payment info to see spending
-Add attendance to see cost per class
-Add schedule to see value analysis
-```
-
----
-
-### Section F: Value Analysis (Individual View Only)
-
-```
-┌─────────────────────────────────────────┐
-│  Value Insights                         │
-├─────────────────────────────────────────┤
-│                                         │
-│  💎 Best Value                          │
-│  Dance: $20/class (attending 12x/month) │
-│                                         │
-│  💸 Highest Spend                       │
-│  Piano: $600/month                      │
-│                                         │
-│  ⚠️ Low Value                           │
-│  Swimming: $320 spent, 0 classes        │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-**Only shown when:** Multiple classes with both payment and attendance data
-
-**Insights:**
-- **Best Value:** Lowest cost per class
-- **Highest Spend:** Most money spent this month
-- **Low Value:** High spending but low/no attendance
+**Navigation:**
+- Each "Add missing payments" link navigates to that specific family member's detail page
+- This provides quick access to record payments for any family member from the spending overview
 
 ---
 
@@ -657,14 +452,12 @@ Add schedule to see value analysis
 
 ### Scenario Matrix
 
-| Has Attendance | Has Schedule | Has Payments | What Shows |
-|---------------|--------------|--------------|------------|
-| ✅ | ❌ | ❌ | Basic attendance patterns, frequency |
-| ✅ | ✅ | ❌ | Attendance patterns, missed classes, rates |
-| ✅ | ❌ | ✅ | Attendance + spending + cost per class |
-| ✅ | ✅ | ✅ | Full insights: patterns, spending, ROI |
-| ❌ | ❌ | ✅ | Spending only, nudge to add attendance |
-| ❌ | ✅ | ❌ | Schedule info, nudge to mark attendance |
+| Has Attendance | Has Payments | What Shows |
+|---------------|--------------|------------|
+| ✅ | ❌ | Attendance trends, "Add Missing Payments" button |
+| ❌ | ✅ | Spending overview, "Add Missing Attendance" button |
+| ✅ | ✅ | Full insights: attendance trends + spending overview |
+| ❌ | ❌ | Empty state with prompts to add data |
 
 ### Empty State Hierarchy
 
@@ -738,21 +531,6 @@ Add schedule to see value analysis
 │  │    Add Missing Attendance         │ │
 │  └───────────────────────────────────┘ │
 │                                         │
-│  Sarah's Classes                        │
-│  ┌───────────────────────────────────┐ │
-│  │ 🎹 Piano Lessons                  │ │
-│  │ Last: 2 days ago ✅               │ │
-│  │ This month: 6 classes             │ │
-│  │ Attendance: 6/8 (75%)             │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 🏊 Swimming                       │ │
-│  │ Last: 45 days ago ⚠️              │ │
-│  │ This month: 0 classes             │ │
-│  │ Attendance: 0/8 (0%)              │ │
-│  └───────────────────────────────────┘ │
-│                                         │
 ├─────────────────────────────────────────┤
 │  SPENDING INSIGHTS                      │
 ├─────────────────────────────────────────┤
@@ -762,36 +540,15 @@ Add schedule to see value analysis
 │  │  $1,200    │  │  $12,000   │        │
 │  └────────────┘  └────────────┘        │
 │                                         │
-│  ┌────────────┐                        │
-│  │Cost/Class  │                        │
-│  │   $50      │                        │
-│  └────────────┘                        │
-│                                         │
 │  Monthly Spending (Last 6 Months)       │
 │  ┌───────────────────────────────────┐ │
 │  │      ▂▄▆▅█▇                       │ │
 │  │  Jul Aug Sep Oct Nov Dec          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
-│  Sarah's Class Spending                 │
 │  ┌───────────────────────────────────┐ │
-│  │ 🎹 Piano Lessons                  │ │
-│  │ This month: $600                  │ │
-│  │ Cost/class: $50                   │ │
-│  │ ROI: Good (75% attendance)        │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 🏊 Swimming                       │ │
-│  │ This month: $320                  │ │
-│  │ ⚠️ Spending but not attending!    │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  Value Insights                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 💎 Best Value: Piano ($50/class)  │ │
-│  │ 💸 Highest Spend: Piano ($600)    │ │
-│  │ ⚠️ Low Value: Swimming (unused)   │ │
+│  │  Add Any Missing Payment Records  │ │
+│  │  for Complete Spend Analysis      │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
@@ -854,20 +611,6 @@ Add schedule to see value analysis
 │  │ └───────────────────────────────┘ │ │
 │  └───────────────────────────────────┘ │
 │                                         │
-│  Classes Needing Attention              │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 🔴 Swimming (Tom)                 │ │
-│  │ Last: 45 days ago                 │ │
-│  │ This month: 0/8 classes           │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌───────────────────────────────────┐ │
-│  │ 🟡 Piano (Sarah)                  │ │
-│  │ Last: 14 days ago                 │ │
-│  │ This month: 2/8 classes (25%)     │ │
-│  └───────────────────────────────────┘ │
-│                                         │
 ├─────────────────────────────────────────┤
 │  FAMILY SPENDING                        │
 ├─────────────────────────────────────────┤
@@ -880,18 +623,27 @@ Add schedule to see value analysis
 │  Spending by Member                     │
 │                                         │
 │  ┌───────────────────────────────────┐ │
-│  │ 👧 Sarah: $1,200 (50%)            │ │
+│  │ 👧 Sarah                          │ │
+│  │ $1,200 (50%)                      │ │
 │  │ ━━━━━━━━━━━━━━━━━━━━━━━━       │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 │  ┌───────────────────────────────────┐ │
-│  │ 👦 Tom: $800 (33%)                │ │
+│  │ 👦 Tom                            │ │
+│  │ $800 (33%)                        │ │
 │  │ ━━━━━━━━━━━━━━━━               │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 │  ┌───────────────────────────────────┐ │
-│  │ 👩 Mom: $400 (17%)                │ │
+│  │ 👩 Mom                            │ │
+│  │ $400 (17%)                        │ │
 │  │ ━━━━━━━━                        │ │
+│  │                                   │ │
+│  │ [+ Add missing payments]          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
@@ -1026,117 +778,6 @@ function calculateSpendingMetrics(
   return { thisMonth, thisYear, costPerClass, trend };
 }
 
-// Get per-class breakdown
-function getPerClassBreakdown(
-  classes: Class[],
-  attendance: ClassAttendance[],
-  payments: Payment[],
-  memberId: string
-): ClassBreakdown[] {
-  const memberClasses = classes.filter(c =>
-    attendance.some(a =>
-      a.class_id === c.id && a.family_member_id === memberId
-    ) ||
-    payments.some(p =>
-      p.class_id === c.id && p.family_member_id === memberId
-    )
-  );
-
-  return memberClasses.map(cls => {
-    const classAttendance = attendance.filter(
-      a => a.class_id === cls.id && a.family_member_id === memberId
-    );
-    const classPayments = payments.filter(
-      p => p.class_id === cls.id && p.family_member_id === memberId
-    );
-
-    // Attendance metrics
-    const lastAttended = maxBy(classAttendance, 'class_date');
-    const daysSince = lastAttended
-      ? differenceInDays(new Date(), new Date(lastAttended.class_date))
-      : null;
-
-    const thisMonth = classAttendance.filter(a =>
-      isSameMonth(new Date(a.class_date), new Date())
-    ).length;
-
-    // Schedule-based metrics
-    let attendanceRate = null;
-    let missedDates = [];
-    if (cls.schedule) {
-      const scheduled = getScheduledDaysInMonth(cls.schedule, new Date());
-      attendanceRate = scheduled.length > 0
-        ? (thisMonth / scheduled.length) * 100
-        : 0;
-
-      missedDates = scheduled.filter(date =>
-        !classAttendance.some(a =>
-          isSameDay(new Date(a.class_date), date)
-        )
-      );
-    }
-
-    // Spending metrics
-    const monthSpending = classPayments
-      .filter(p => isSameMonth(new Date(p.payment_date), new Date()))
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const yearSpending = classPayments
-      .filter(p => isSameYear(new Date(p.payment_date), new Date()))
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const costPerClass = classAttendance.length > 0
-      ? yearSpending / classAttendance.length
-      : null;
-
-    return {
-      class: cls,
-      daysSince,
-      thisMonth,
-      attendanceRate,
-      missedDates,
-      monthSpending,
-      yearSpending,
-      costPerClass
-    };
-  });
-}
-
-// Get at-risk classes
-function getAtRiskClasses(
-  breakdown: ClassBreakdown[]
-): AtRiskClass[] {
-  return breakdown
-    .filter(b => {
-      // Not attended in 14+ days
-      if (b.daysSince && b.daysSince >= 14) return true;
-
-      // Low attendance rate
-      if (b.attendanceRate !== null && b.attendanceRate < 50) return true;
-
-      // Spending but not attending
-      if (b.monthSpending > 0 && b.thisMonth === 0) return true;
-
-      return false;
-    })
-    .map(b => ({
-      class: b.class,
-      severity: b.daysSince >= 30 ? 'high' : 'medium',
-      reason: b.daysSince >= 30
-        ? `Not attended in ${b.daysSince} days`
-        : b.thisMonth === 0 && b.monthSpending > 0
-        ? 'Spending but not attending'
-        : `Low attendance: ${b.attendanceRate}%`
-    }))
-    .sort((a, b) => {
-      // High severity first
-      if (a.severity !== b.severity) {
-        return a.severity === 'high' ? -1 : 1;
-      }
-      return 0;
-    });
-}
-
 // Family View: Render trend chart for each member
 function renderFamilyAttendanceView(
   familyMembers: FamilyMember[],
@@ -1171,6 +812,50 @@ function renderFamilyAttendanceView(
               <Text style={styles.buttonText}>
                 Add any missing attendance for {member.name}
               </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// Family View: Render spending by member with payment buttons
+function renderFamilySpendingView(
+  familyMembers: FamilyMember[],
+  allPayments: Payment[],
+  navigation: any
+): JSX.Element {
+  const familyThisMonth = allPayments
+    .filter(p => isSameMonth(new Date(p.payment_date), new Date()))
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  return (
+    <View>
+      {familyMembers.map(member => {
+        const memberPayments = allPayments
+          .filter(p => p.family_member_id === member.id)
+          .filter(p => isSameMonth(new Date(p.payment_date), new Date()));
+
+        const total = memberPayments.reduce((sum, p) => sum + p.amount, 0);
+        const percentage = familyThisMonth > 0 ? (total / familyThisMonth) * 100 : 0;
+
+        return (
+          <View key={member.id} style={styles.memberSpendingCard}>
+            <Text style={styles.memberName}>{member.name}</Text>
+            <Text style={styles.amount}>${total} ({percentage.toFixed(0)}%)</Text>
+
+            <View style={styles.progressBar}>
+              <View style={[styles.progress, { width: `${percentage}%` }]} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.addPaymentLink}
+              onPress={() => navigation.navigate('FamilyMemberDetail', {
+                familyMemberId: member.id
+              })}
+            >
+              <Text style={styles.linkText}>+ Add missing payments</Text>
             </TouchableOpacity>
           </View>
         );
@@ -1298,29 +983,33 @@ const useInsightsStore = create<InsightsState>((set) => ({
 ### Unit Tests
 
 - [ ] `calculateAttendanceMetrics()` with various date ranges
-- [ ] `calculateSpendingMetrics()` with/without attendance
-- [ ] `getPerClassBreakdown()` with missing data
-- [ ] `getAtRiskClasses()` severity sorting
+- [ ] `calculateSpendingMetrics()` with various payment data
 - [ ] `filterByMember()` for individual vs family view
+- [ ] `renderFamilyAttendanceView()` with multiple members
+- [ ] `renderFamilySpendingView()` with payment distribution
 
 ### Integration Tests
 
-- [ ] Member selection updates all sections
-- [ ] Data refresh recomputes all metrics
-- [ ] Empty states show appropriate nudges
-- [ ] Progressive enhancement based on available data
-- [ ] Family view renders trend chart for each member
-- [ ] "Add any missing attendance" button navigates to correct member's class page
+- [ ] Member selection updates both attendance and spending sections
+- [ ] Data refresh recomputes all metrics correctly
+- [ ] Empty states show appropriate nudges for missing data
+- [ ] Family view renders attendance trend chart for each member
+- [ ] Family view renders spending bars with payment buttons for each member
+- [ ] "Add missing attendance" button navigates to correct member's detail page
+- [ ] "Add missing payments" link navigates to correct member's detail page
+- [ ] Individual view displays "Add Any Missing Payment Records" button
 - [ ] Empty state for individual members shows correctly in family view
 
 ### E2E Tests
 
-- [ ] Load insights → See family view with trend charts for all members
-- [ ] Open dropdown → See member options
-- [ ] Select member → See individual view with "Add Missing Attendance" button
-- [ ] Tap "Add missing attendance for <member>" → Navigate to member's class page
-- [ ] Tap "Mark Attendance" in empty state → Navigate to member's class page
-- [ ] Refresh data → Metrics update
+- [ ] Load insights → See family view with attendance trends and spending for all members
+- [ ] Open dropdown → See member options ("All Family" and individual members)
+- [ ] Select member → See individual view with attendance trend and spending overview
+- [ ] Tap "Add Missing Attendance" button → Navigate to member's detail page
+- [ ] Tap "Add Any Missing Payment Records" button → Navigate to member's detail page
+- [ ] Tap "+ Add missing payments" link in family view → Navigate to correct member's detail page
+- [ ] Tap "Mark Attendance" in empty state → Navigate to member's detail page
+- [ ] Refresh data → All metrics update correctly
 - [ ] Navigate back → Selection persists
 
 ---
@@ -1335,15 +1024,15 @@ const useInsightsStore = create<InsightsState>((set) => ({
 
 ### Actionability
 
-- **Payment Recording After View:** % who record payment after viewing low value warning (target: 20%+)
-- **Attendance Marking After View:** % who mark attendance after viewing at-risk classes (target: 30%+)
-- **"Add Missing Attendance" Button Usage:** % who tap the button to mark attendance (target: 25%+)
+- **"Add Missing Attendance" Button Usage:** % who tap to add attendance (target: 30%+)
+- **"Add Missing Payments" Button/Link Usage:** % who tap to record payments (target: 25%+)
 - **Empty State CTA Usage:** % who tap "Mark Attendance" from empty state (target: 40%+)
+- **Data Completion Rate:** % of users who add missing data after viewing insights (target: 35%+)
 
 ### Data Quality
 
-- **Schedule Adoption:** % of classes with schedule (influences enhanced insights)
-- **Payment Tracking:** % of active classes with payment data
+- **Attendance Data Coverage:** % of active classes with regular attendance tracking
+- **Payment Data Coverage:** % of active classes with payment data
 
 ---
 
@@ -1432,6 +1121,7 @@ ORDER BY created_at ASC;
 | 2025-12-12 | 1.2 | Removed "This Month" and "Last Month" summary widgets from attendance overview; 6-month trend chart provides sufficient visual information | - |
 | 2025-12-12 | 1.3 | Added "Add Missing Attendance" button below attendance trend chart; Updated empty state with "Mark Attendance" button and clearer CTA text | - |
 | 2025-12-12 | 1.4 | Updated Family View to show 6-month trend chart for each member; Added generic "Add any missing attendance for <member name>" button for all members regardless of data availability | - |
+| 2025-12-12 | 1.5 | Simplified screen structure: Removed sections B (Per-Class Breakdown), C (At-Risk Classes), E (Spending by Class), and F (Value Analysis); Removed cost/class widget from Section D; Added "Add Any Missing Payment Records" button in Individual View; Added elegant "Add missing payments" link for each member in Family View spending section | - |
 
 ---
 
@@ -1458,16 +1148,18 @@ ORDER BY created_at ASC;
 │ [Add Missing       │
 │  Attendance]       │
 │                    │
-│ Classes ▼          │
-│ 🎹 Piano  2d  ✅   │
-│ 🏊 Swim  45d  ⚠️   │
-│                    │
 │ SPENDING ▼         │
 │ ┌────────┐         │
 │ │ $1,200 │         │
 │ │  This  │         │
 │ │  Month │         │
 │ └────────┘         │
+│                    │
+│ [Spending Chart]   │
+│ (Last 6 Months)    │
+│                    │
+│ [Add Missing       │
+│  Payment Records]  │
 │                    │
 └────────────────────┘
 ```
@@ -1517,16 +1209,32 @@ ORDER BY created_at ASC;
 │ │ Mom            │ │
 │ └────────────────┘ │
 │                    │
-│ At Risk ▼          │
-│ 🔴 Swim (Tom)      │
-│ 🟡 Piano (Sarah)   │
-│                    │
 │ SPENDING ▼         │
 │ Total: $2,400      │
 │                    │
-│ 👧 Sarah: 50%      │
-│ 👦 Tom: 33%        │
-│ 👩 Mom: 17%        │
+│ ┌──────────────┐   │
+│ │ 👧 Sarah     │   │
+│ │ $1,200 (50%) │   │
+│ │ ━━━━━━━━━━  │   │
+│ │ + Add missing│   │
+│ │   payments   │   │
+│ └──────────────┘   │
+│                    │
+│ ┌──────────────┐   │
+│ │ 👦 Tom       │   │
+│ │ $800 (33%)   │   │
+│ │ ━━━━━━━     │   │
+│ │ + Add missing│   │
+│ │   payments   │   │
+│ └──────────────┘   │
+│                    │
+│ ┌──────────────┐   │
+│ │ 👩 Mom       │   │
+│ │ $400 (17%)   │   │
+│ │ ━━━━        │   │
+│ │ + Add missing│   │
+│ │   payments   │   │
+│ └──────────────┘   │
 │                    │
 └────────────────────┘
 ```
@@ -1535,4 +1243,4 @@ ORDER BY created_at ASC;
 
 ## Conclusion
 
-The Insights screen provides progressive, actionable data that adapts to available information, helping users understand both attendance patterns and spending across their family's classes. By offering both individual deep-dives and family-level comparisons through a simple dropdown selector, it serves multiple use cases while maintaining simplicity and clarity.
+The Insights screen provides focused, actionable data about attendance and spending. The simplified design emphasizes two key metrics (attendance trends and spending overview) with direct paths to add missing data through elegant, contextual buttons. By offering both individual and family-level views through a simple dropdown selector, it serves multiple use cases while maintaining clarity and avoiding information overload.
