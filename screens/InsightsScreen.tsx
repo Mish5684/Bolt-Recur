@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRecur } from '../shared/stores/recur';
 import { format, eachMonthOfInterval, subMonths, isSameMonth, isSameYear, eachWeekOfInterval, subWeeks, startOfWeek, endOfWeek } from 'date-fns';
-import { FamilyMember, ClassAttendance, Payment } from '../shared/types/database';
+import { FamilyMember, ClassAttendance, Payment, ClassWithDetails } from '../shared/types/database';
 
 interface MemberOption {
   id: string | null;
@@ -26,17 +26,27 @@ export default function InsightsScreen({ navigation }: any) {
     fetchAllFamilyMembers,
     fetchAllAttendance,
     fetchAllPayments,
+    fetchFamilyMemberClasses,
     loading,
   } = useRecur();
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [allAttendance, setAllAttendance] = useState<ClassAttendance[]>([]);
   const [allPayments, setAllPayments] = useState<Payment[]>([]);
+  const [memberClasses, setMemberClasses] = useState<ClassWithDetails[]>([]);
   const [selectorVisible, setSelectorVisible] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (selectedMemberId) {
+      loadMemberClasses();
+    } else {
+      setMemberClasses([]);
+    }
+  }, [selectedMemberId]);
 
   const loadData = async () => {
     await fetchAllFamilyMembers();
@@ -44,6 +54,13 @@ export default function InsightsScreen({ navigation }: any) {
     const payments = await fetchAllPayments();
     setAllAttendance(attendance);
     setAllPayments(payments);
+  };
+
+  const loadMemberClasses = async () => {
+    if (selectedMemberId) {
+      const classes = await fetchFamilyMemberClasses(selectedMemberId);
+      setMemberClasses(classes);
+    }
   };
 
   const onRefresh = () => {
@@ -167,6 +184,27 @@ export default function InsightsScreen({ navigation }: any) {
     });
   };
 
+  const getClassAttendanceTrend = (classId: string) => {
+    const weeks = eachWeekOfInterval({
+      start: subWeeks(new Date(), 7),
+      end: new Date(),
+    }, { weekStartsOn: 0 }); // Start week on Sunday
+
+    return weeks.map((week, index) => {
+      const weekStart = startOfWeek(week, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(week, { weekStartsOn: 0 });
+
+      return {
+        week: format(weekStart, 'M/d'),
+        count: attendance.filter(a => {
+          const classDate = new Date(a.class_date);
+          return a.class_id === classId && classDate >= weekStart && classDate <= weekEnd;
+        }).length,
+        showLabel: index % 2 === 0, // Show label for every other week
+      };
+    });
+  };
+
   const getMemberAttendanceBreakdown = () => {
     if (selectedMemberId) return [];
 
@@ -213,6 +251,10 @@ export default function InsightsScreen({ navigation }: any) {
     if (selectedMemberId) {
       navigation.navigate('FamilyMemberDetail', { memberId: selectedMemberId });
     }
+  };
+
+  const handleAddAttendanceForClass = (memberId: string, classId: string) => {
+    navigation.navigate('ClassDetail', { memberId, classId });
   };
 
   const handleMemberPaymentAdd = (memberId: string) => {
@@ -376,38 +418,58 @@ export default function InsightsScreen({ navigation }: any) {
               {/* Individual View */}
               {selectedMemberId ? (
                 <>
-                  <View style={styles.chartCard}>
-                    <Text style={styles.chartTitle}>Last 8 Weeks Attendance Trend</Text>
-                    <View style={styles.chartContainer}>
-                      <View style={styles.yAxisLabels}>
-                        <Text style={styles.yAxisLabel}>{maxAttendance}</Text>
-                        <Text style={styles.yAxisLabel}>{Math.round(maxAttendance * 0.5)}</Text>
-                        <Text style={styles.yAxisLabel}>0</Text>
-                      </View>
-                      <View style={styles.barChart}>
-                        {attendanceTrend.map((item, index) => {
-                          const barHeight = maxAttendance > 0 ? (item.count / maxAttendance) * 80 : 4;
-                          return (
-                            <View key={index} style={styles.barContainer}>
-                              <View style={styles.barWrapper}>
-                                <View style={[styles.bar, { height: barHeight || 4 }]} />
-                              </View>
-                              <Text style={styles.barLabel}>{item.showLabel ? item.week : ''}</Text>
-                              <Text style={styles.barValue}>{item.count}</Text>
+                  <Text style={styles.subsectionTitle}>Attendance by Class</Text>
+
+                  {memberClasses.length > 0 ? (
+                    memberClasses.map((classItem) => {
+                      const classTrend = getClassAttendanceTrend(classItem.id);
+                      const maxClassAttendance = Math.max(...classTrend.map(t => t.count), 1);
+
+                      return (
+                        <View key={classItem.id} style={styles.chartCard}>
+                          <Text style={styles.chartTitle}>{classItem.name}</Text>
+                          <Text style={styles.chartSubtitle}>Last 8 Weeks</Text>
+
+                          <View style={styles.chartContainer}>
+                            <View style={styles.yAxisLabels}>
+                              <Text style={styles.yAxisLabel}>{maxClassAttendance}</Text>
+                              <Text style={styles.yAxisLabel}>{Math.round(maxClassAttendance * 0.5)}</Text>
+                              <Text style={styles.yAxisLabel}>0</Text>
                             </View>
-                          );
-                        })}
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.memberActionButton}
-                      onPress={handleAddAttendance}
-                    >
-                      <Text style={styles.memberActionButtonText}>
-                        Add any missing attendance for {selectedOption.label}
+                            <View style={styles.barChart}>
+                              {classTrend.map((item, index) => {
+                                const barHeight = maxClassAttendance > 0 ? (item.count / maxClassAttendance) * 80 : 4;
+                                return (
+                                  <View key={index} style={styles.barContainer}>
+                                    <View style={styles.barWrapper}>
+                                      <View style={[styles.bar, { height: barHeight || 4 }]} />
+                                    </View>
+                                    <Text style={styles.barLabel}>{item.showLabel ? item.week : ''}</Text>
+                                    <Text style={styles.barValue}>{item.count}</Text>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          </View>
+
+                          <TouchableOpacity
+                            style={styles.memberActionButton}
+                            onPress={() => handleAddAttendanceForClass(selectedMemberId, classItem.id)}
+                          >
+                            <Text style={styles.memberActionButtonText}>
+                              Add any missing attendance for {classItem.name}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyText}>
+                        {selectedOption.label} is not enrolled in any classes yet
                       </Text>
-                    </TouchableOpacity>
-                  </View>
+                    </View>
+                  )}
                 </>
               ) : (
                 /* Family View */
@@ -462,19 +524,23 @@ export default function InsightsScreen({ navigation }: any) {
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>No attendance records yet</Text>
-              {selectedMemberId && (
+              {selectedMemberId && memberClasses.length > 0 ? (
                 <>
+                  <Text style={styles.emptyText}>
+                    Mark attendance to see patterns and trends
+                  </Text>
                   <TouchableOpacity
                     style={styles.emptyButton}
                     onPress={handleAddAttendance}
                   >
                     <Text style={styles.emptyButtonText}>Mark Attendance</Text>
                   </TouchableOpacity>
-                  <Text style={styles.emptyText}>
-                    See patterns and trends with up to date attendance records
-                  </Text>
                 </>
-              )}
+              ) : selectedMemberId ? (
+                <Text style={styles.emptyText}>
+                  Enroll {selectedOption.label} in classes to start tracking attendance
+                </Text>
+              ) : null}
             </View>
           )}
         </View>
@@ -641,7 +707,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 12,
   },
   chartContainer: {
     flexDirection: 'row',
