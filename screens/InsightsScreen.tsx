@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRecur } from '../shared/stores/recur';
-import { format, eachMonthOfInterval, subMonths, isSameMonth, isSameYear } from 'date-fns';
+import { format, eachMonthOfInterval, subMonths, isSameMonth, isSameYear, eachWeekOfInterval, subWeeks, startOfWeek, endOfWeek } from 'date-fns';
 import { FamilyMember, ClassAttendance, Payment } from '../shared/types/database';
 
 interface MemberOption {
@@ -147,15 +147,24 @@ export default function InsightsScreen({ navigation }: any) {
 
   // Attendance Calculations
   const getAttendanceTrend = () => {
-    const months = eachMonthOfInterval({
-      start: subMonths(new Date(), 5),
+    const weeks = eachWeekOfInterval({
+      start: subWeeks(new Date(), 11),
       end: new Date(),
-    });
+    }, { weekStartsOn: 0 }); // Start week on Sunday
 
-    return months.map(month => ({
-      month: format(month, 'MMM'),
-      count: attendance.filter(a => isSameMonth(new Date(a.class_date), month)).length,
-    }));
+    return weeks.map((week, index) => {
+      const weekStart = startOfWeek(week, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(week, { weekStartsOn: 0 });
+
+      return {
+        week: format(weekStart, 'M/d'),
+        count: attendance.filter(a => {
+          const classDate = new Date(a.class_date);
+          return classDate >= weekStart && classDate <= weekEnd;
+        }).length,
+        showLabel: index % 2 === 0, // Show label for every other week
+      };
+    });
   };
 
   const getMemberAttendanceBreakdown = () => {
@@ -284,16 +293,15 @@ export default function InsightsScreen({ navigation }: any) {
                         })}
                       </View>
                     </View>
+                    <TouchableOpacity
+                      style={styles.memberActionButton}
+                      onPress={handleAddPayment}
+                    >
+                      <Text style={styles.memberActionButtonText}>
+                        Add any missing payments for {selectedOption.label}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleAddPayment}
-                  >
-                    <Text style={styles.actionButtonText}>
-                      Add Any Missing Payment Records for Complete Spend Analysis
-                    </Text>
-                  </TouchableOpacity>
                 </>
               ) : (
                 /* Family View */
@@ -369,7 +377,7 @@ export default function InsightsScreen({ navigation }: any) {
               {selectedMemberId ? (
                 <>
                   <View style={styles.chartCard}>
-                    <Text style={styles.chartTitle}>Attendance Trend (Last 6 Months)</Text>
+                    <Text style={styles.chartTitle}>Last 12 Weeks Attendance Trend</Text>
                     <View style={styles.chartContainer}>
                       <View style={styles.yAxisLabels}>
                         <Text style={styles.yAxisLabel}>{maxAttendance}</Text>
@@ -384,21 +392,22 @@ export default function InsightsScreen({ navigation }: any) {
                               <View style={styles.barWrapper}>
                                 <View style={[styles.bar, { height: barHeight || 4 }]} />
                               </View>
-                              <Text style={styles.barLabel}>{item.month}</Text>
+                              <Text style={styles.barLabel}>{item.showLabel ? item.week : ''}</Text>
                               <Text style={styles.barValue}>{item.count}</Text>
                             </View>
                           );
                         })}
                       </View>
                     </View>
+                    <TouchableOpacity
+                      style={styles.memberActionButton}
+                      onPress={handleAddAttendance}
+                    >
+                      <Text style={styles.memberActionButtonText}>
+                        Add any missing attendance for {selectedOption.label}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleAddAttendance}
-                  >
-                    <Text style={styles.actionButtonText}>Add Missing Attendance</Text>
-                  </TouchableOpacity>
                 </>
               ) : (
                 /* Family View */
@@ -808,6 +817,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     alignItems: 'center',
+    marginTop: 12,
   },
   memberActionButtonText: {
     fontSize: 12,
