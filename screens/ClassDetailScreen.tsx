@@ -413,14 +413,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
               onAddAttendance={handleMarkAttendance}
               classStatus={classData?.status}
             />
-            <TouchableOpacity
-              style={styles.addMissingButton}
-              onPress={handleMarkAttendance.bind(null, new Date())}
-            >
-              <Text style={styles.addMissingButtonText}>
-                Add any missing attendance
-              </Text>
-            </TouchableOpacity>
           </View>
         </>
       );
@@ -442,21 +434,21 @@ export default function ClassDetailScreen({ route, navigation }: any) {
             </View>
           )}
           {payments.length > 0 && (
-            <View style={styles.paymentsCard}>
-              {payments.map((item, index) => (
-                <View key={item.id}>
-                  {renderPayment({ item, isLast: index === payments.length - 1 })}
-                </View>
-              ))}
+            <>
+              <View style={styles.paymentsCard}>
+                {payments.map((item, index) => (
+                  <View key={item.id}>
+                    {renderPayment({ item, isLast: index === payments.length - 1 })}
+                  </View>
+                ))}
+              </View>
               <TouchableOpacity
-                style={styles.addMissingButton}
+                style={styles.recordPaymentButton}
                 onPress={handleRecordPayment}
               >
-                <Text style={styles.addMissingButtonText}>
-                  Add any missing payments
-                </Text>
+                <Text style={styles.recordPaymentButtonText}>Record Payment</Text>
               </TouchableOpacity>
-            </View>
+            </>
           )}
         </>
       );
@@ -796,15 +788,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-  },
-  addMissingButton: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  addMissingButtonText: {
-    fontSize: 14,
-    color: '#2563EB',
-    textDecorationLine: 'underline',
   },
   sectionTitle: {
     fontSize: 16,
