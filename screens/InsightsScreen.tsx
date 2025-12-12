@@ -707,13 +707,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 12,
   },
   chartSubtitle: {
     fontSize: 12,
     fontWeight: '500',
     color: '#6B7280',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   chartContainer: {
     flexDirection: 'row',
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   bar: {
-    width: 32,
+    width: 20,
     backgroundColor: '#2563EB',
     borderRadius: 4,
     minHeight: 4,
