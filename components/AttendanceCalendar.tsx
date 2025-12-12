@@ -221,8 +221,6 @@ export default function AttendanceCalendar({
         </View>
       </View>
 
-      <Text style={styles.hint}>Tap any past date to mark/unmark</Text>
-
       {renderMonthPicker()}
     </View>
   );
@@ -348,13 +346,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginLeft: 8,
-  },
-  hint: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 8,
   },
   monthPickerOverlay: {
     position: 'absolute',
