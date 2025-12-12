@@ -777,17 +777,13 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   addMissingButton: {
-    backgroundColor: '#DBEAFE',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
     marginTop: 12,
+    alignItems: 'center',
   },
   addMissingButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1E40AF',
+    fontSize: 14,
+    color: '#2563EB',
+    textDecorationLine: 'underline',
   },
   sectionTitle: {
     fontSize: 16,
