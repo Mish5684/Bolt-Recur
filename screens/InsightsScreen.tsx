@@ -72,6 +72,29 @@ export default function InsightsScreen({ navigation }: any) {
 
   const { attendance, payments } = getFilteredData();
 
+  // Get the most common currency from payments
+  const getCurrency = () => {
+    if (payments.length === 0) return '$';
+    const currencies = payments.map(p => p.currency || 'USD');
+    const currencyCount = currencies.reduce((acc, curr) => {
+      acc[curr] = (acc[curr] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const mostCommon = Object.keys(currencyCount).reduce((a, b) =>
+      currencyCount[a] > currencyCount[b] ? a : b
+    );
+    // Map currency codes to symbols
+    const currencySymbols: Record<string, string> = {
+      'USD': '$',
+      'INR': '₹',
+      'EUR': '€',
+      'GBP': '£',
+    };
+    return currencySymbols[mostCommon] || mostCommon;
+  };
+
+  const currency = getCurrency();
+
   // Spending Calculations
   const getThisMonthSpending = () => {
     return payments
@@ -230,11 +253,11 @@ export default function InsightsScreen({ navigation }: any) {
                   <View style={styles.statsRow}>
                     <View style={styles.statCard}>
                       <Text style={styles.statLabel}>This Month</Text>
-                      <Text style={styles.statValue}>${thisMonthSpending.toFixed(0)}</Text>
+                      <Text style={styles.statValue}>{currency}{thisMonthSpending.toFixed(0)}</Text>
                     </View>
                     <View style={styles.statCard}>
                       <Text style={styles.statLabel}>This Year</Text>
-                      <Text style={styles.statValue}>${thisYearSpending.toFixed(0)}</Text>
+                      <Text style={styles.statValue}>{currency}{thisYearSpending.toFixed(0)}</Text>
                     </View>
                   </View>
 
@@ -270,11 +293,11 @@ export default function InsightsScreen({ navigation }: any) {
                   <View style={styles.statsRow}>
                     <View style={styles.statCard}>
                       <Text style={styles.statLabel}>This Month</Text>
-                      <Text style={styles.statValue}>${thisMonthSpending.toFixed(0)}</Text>
+                      <Text style={styles.statValue}>{currency}{thisMonthSpending.toFixed(0)}</Text>
                     </View>
                     <View style={styles.statCard}>
                       <Text style={styles.statLabel}>This Year</Text>
-                      <Text style={styles.statValue}>${thisYearSpending.toFixed(0)}</Text>
+                      <Text style={styles.statValue}>{currency}{thisYearSpending.toFixed(0)}</Text>
                     </View>
                   </View>
 
@@ -288,7 +311,7 @@ export default function InsightsScreen({ navigation }: any) {
                           <Text style={styles.memberName}>{item.member.name}</Text>
                         </View>
                         <Text style={styles.spendingAmount}>
-                          ${item.amount.toFixed(0)} ({item.percentage.toFixed(0)}%)
+                          {currency}{item.amount.toFixed(0)} ({item.percentage.toFixed(0)}%)
                         </Text>
                       </View>
                       <View style={styles.progressBar}>
