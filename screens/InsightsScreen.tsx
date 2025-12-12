@@ -148,7 +148,7 @@ export default function InsightsScreen({ navigation }: any) {
   // Attendance Calculations
   const getAttendanceTrend = () => {
     const weeks = eachWeekOfInterval({
-      start: subWeeks(new Date(), 11),
+      start: subWeeks(new Date(), 7),
       end: new Date(),
     }, { weekStartsOn: 0 }); // Start week on Sunday
 
@@ -377,7 +377,7 @@ export default function InsightsScreen({ navigation }: any) {
               {selectedMemberId ? (
                 <>
                   <View style={styles.chartCard}>
-                    <Text style={styles.chartTitle}>Last 12 Weeks Attendance Trend</Text>
+                    <Text style={styles.chartTitle}>Last 8 Weeks Attendance Trend</Text>
                     <View style={styles.chartContainer}>
                       <View style={styles.yAxisLabels}>
                         <Text style={styles.yAxisLabel}>{maxAttendance}</Text>
