@@ -142,15 +142,15 @@ export default function InsightsScreen({ navigation }: any) {
   const getMemberSpendingBreakdown = () => {
     if (selectedMemberId) return [];
 
-    const thisMonthTotal = getThisMonthSpending();
+    const thisYearTotal = getThisYearSpending();
 
     return familyMembers
       .map(member => {
         const memberPayments = allPayments.filter(
-          p => p.family_member_id === member.id && isSameMonth(new Date(p.payment_date), new Date())
+          p => p.family_member_id === member.id && isSameYear(new Date(p.payment_date), new Date())
         );
         const total = memberPayments.reduce((sum, p) => sum + p.amount, 0);
-        const percentage = thisMonthTotal > 0 ? (total / thisMonthTotal) * 100 : 0;
+        const percentage = thisYearTotal > 0 ? (total / thisYearTotal) * 100 : 0;
 
         return {
           member,
@@ -158,7 +158,6 @@ export default function InsightsScreen({ navigation }: any) {
           percentage,
         };
       })
-      .filter(m => m.amount > 0)
       .sort((a, b) => b.amount - a.amount);
   };
 
@@ -359,7 +358,7 @@ export default function InsightsScreen({ navigation }: any) {
                     </View>
                   </View>
 
-                  <Text style={styles.subsectionTitle}>Spending by Member</Text>
+                  <Text style={styles.subsectionTitle}>YTD Spending by member</Text>
 
                   {memberSpendingBreakdown.map((item, index) => (
                     <View key={item.member.id} style={styles.memberSpendingCard}>
