@@ -186,28 +186,93 @@ const trendData = months.map(month => ({
 ├─────────────────────────────────────────┤
 │                                         │
 │  👧 Sarah                               │
-│  This month: 20 classes  ↗️ +4         │
-│  ━━━━━━━━━━━━━━━━━━━━━━━              │
+│  ┌───────────────────────────────────┐ │
+│  │  Attendance Trend (Last 6 Months) │ │
+│  │      ▂▄▆▇█▇                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  └───────────────────────────────────┘ │
+│  ┌───────────────────────────────────┐ │
+│  │ Add any missing attendance for    │ │
+│  │ Sarah                             │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ─────────────────────────────────      │
 │                                         │
 │  👦 Tom                                 │
-│  This month: 12 classes  ↘️ -3         │
-│  ━━━━━━━━━━━━━                        │
+│  ┌───────────────────────────────────┐ │
+│  │  Attendance Trend (Last 6 Months) │ │
+│  │      ▃▅▄▆▅▄                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  └───────────────────────────────────┘ │
+│  ┌───────────────────────────────────┐ │
+│  │ Add any missing attendance for    │ │
+│  │ Tom                               │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ─────────────────────────────────      │
 │                                         │
 │  👩 Mom                                 │
-│  This month: 8 classes  → 0            │
-│  ━━━━━━━━━                            │
+│  ┌───────────────────────────────────┐ │
+│  │  Attendance Trend (Last 6 Months) │ │
+│  │      ▂▃▃▄▃▂                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  └───────────────────────────────────┘ │
+│  ┌───────────────────────────────────┐ │
+│  │ Add any missing attendance for    │ │
+│  │ Mom                               │ │
+│  └───────────────────────────────────┘ │
 │                                         │
 └─────────────────────────────────────────┘
 ```
 
 **Data Displayed:**
 - Each family member shown as a card
-- Current month attendance count
-- Change vs last month with trend arrow
-- Visual bar showing relative comparison
+- 6-month attendance trend chart (if data available)
+- "Add any missing attendance for <member name>" button for each member
 - Sorted by attendance count (highest first)
 
+**Button Behavior:**
+- Each member has their own "Add any missing attendance" button
+- Button is displayed regardless of whether attendance data exists
+- Tapping the button navigates to that specific member's class detail page
+- Provides quick access to mark attendance for any family member
+
+**Empty State (No Attendance for a Member):**
+```
+┌─────────────────────────────────────────┐
+│  👦 Tom                                 │
+│  ┌───────────────────────────────────┐ │
+│  │  No attendance records yet        │ │
+│  └───────────────────────────────────┘ │
+│  ┌───────────────────────────────────┐ │
+│  │ Add any missing attendance for    │ │
+│  │ Tom                               │ │
+│  └───────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
 **Key Difference:** Family view shows COMPARISON (side-by-side member activity), not totals
+
+**Calculations (Per Family Member):**
+```javascript
+// For each family member, calculate 6-month trend
+const months = eachMonthOfInterval({
+  start: subMonths(new Date(), 5),
+  end: new Date()
+});
+
+const memberTrendData = months.map(month => ({
+  month: format(month, 'MMM'),
+  count: allAttendance.filter(a =>
+    a.family_member_id === member.id &&
+    isSameMonth(new Date(a.class_date), month)
+  ).length
+}));
+```
+
+**Navigation:**
+- Each "Add any missing attendance for <member name>" button navigates to that specific family member's class detail page
+- This provides quick access to mark attendance for any family member from the comparison view
 
 ---
 
@@ -752,20 +817,41 @@ Add schedule to see value analysis
 │                                         │
 │  ┌───────────────────────────────────┐ │
 │  │ 👧 Sarah                          │ │
-│  │ This month: 20 classes  ↗️ +4     │ │
-│  │ ━━━━━━━━━━━━━━━━━━━━━━━         │ │
+│  │                                   │ │
+│  │ Attendance Trend (Last 6 Months)  │ │
+│  │      ▂▄▆▇█▇                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  │                                   │ │
+│  │ ┌───────────────────────────────┐ │ │
+│  │ │ Add any missing attendance    │ │ │
+│  │ │ for Sarah                     │ │ │
+│  │ └───────────────────────────────┘ │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 │  ┌───────────────────────────────────┐ │
 │  │ 👦 Tom                            │ │
-│  │ This month: 12 classes  ↘️ -3     │ │
-│  │ ━━━━━━━━━━━━━                   │ │
+│  │                                   │ │
+│  │ Attendance Trend (Last 6 Months)  │ │
+│  │      ▃▅▄▆▅▄                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  │                                   │ │
+│  │ ┌───────────────────────────────┐ │ │
+│  │ │ Add any missing attendance    │ │ │
+│  │ │ for Tom                       │ │ │
+│  │ └───────────────────────────────┘ │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 │  ┌───────────────────────────────────┐ │
 │  │ 👩 Mom                            │ │
-│  │ This month: 8 classes  → 0        │ │
-│  │ ━━━━━━━━━                        │ │
+│  │                                   │ │
+│  │ Attendance Trend (Last 6 Months)  │ │
+│  │      ▂▃▃▄▃▂                       │ │
+│  │  Jul Aug Sep Oct Nov Dec          │ │
+│  │                                   │ │
+│  │ ┌───────────────────────────────┐ │ │
+│  │ │ Add any missing attendance    │ │ │
+│  │ │ for Mom                       │ │ │
+│  │ └───────────────────────────────┘ │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 │  Classes Needing Attention              │
@@ -1050,6 +1136,48 @@ function getAtRiskClasses(
       return 0;
     });
 }
+
+// Family View: Render trend chart for each member
+function renderFamilyAttendanceView(
+  familyMembers: FamilyMember[],
+  allAttendance: ClassAttendance[],
+  navigation: any
+): JSX.Element {
+  return (
+    <View>
+      {familyMembers.map(member => {
+        const memberAttendance = allAttendance.filter(
+          a => a.family_member_id === member.id
+        );
+
+        const metrics = calculateAttendanceMetrics(memberAttendance);
+
+        return (
+          <View key={member.id} style={styles.memberCard}>
+            <Text style={styles.memberName}>{member.name}</Text>
+
+            {metrics.trend.length > 0 ? (
+              <AttendanceTrendChart data={metrics.trend} />
+            ) : (
+              <Text style={styles.emptyState}>No attendance records yet</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.addAttendanceButton}
+              onPress={() => navigation.navigate('FamilyMemberDetail', {
+                familyMemberId: member.id
+              })}
+            >
+              <Text style={styles.buttonText}>
+                Add any missing attendance for {member.name}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 ```
 
 ### State Management
@@ -1181,12 +1309,17 @@ const useInsightsStore = create<InsightsState>((set) => ({
 - [ ] Data refresh recomputes all metrics
 - [ ] Empty states show appropriate nudges
 - [ ] Progressive enhancement based on available data
+- [ ] Family view renders trend chart for each member
+- [ ] "Add any missing attendance" button navigates to correct member's class page
+- [ ] Empty state for individual members shows correctly in family view
 
 ### E2E Tests
 
-- [ ] Load insights → See family view
+- [ ] Load insights → See family view with trend charts for all members
 - [ ] Open dropdown → See member options
-- [ ] Select member → See individual view
+- [ ] Select member → See individual view with "Add Missing Attendance" button
+- [ ] Tap "Add missing attendance for <member>" → Navigate to member's class page
+- [ ] Tap "Mark Attendance" in empty state → Navigate to member's class page
 - [ ] Refresh data → Metrics update
 - [ ] Navigate back → Selection persists
 
@@ -1204,6 +1337,8 @@ const useInsightsStore = create<InsightsState>((set) => ({
 
 - **Payment Recording After View:** % who record payment after viewing low value warning (target: 20%+)
 - **Attendance Marking After View:** % who mark attendance after viewing at-risk classes (target: 30%+)
+- **"Add Missing Attendance" Button Usage:** % who tap the button to mark attendance (target: 25%+)
+- **Empty State CTA Usage:** % who tap "Mark Attendance" from empty state (target: 40%+)
 
 ### Data Quality
 
@@ -1296,6 +1431,7 @@ ORDER BY created_at ASC;
 | 2025-12-12 | 1.1 | Renamed from "Analytics" to "Insights"; Changed selector from horizontal scrollable chips to dropdown | - |
 | 2025-12-12 | 1.2 | Removed "This Month" and "Last Month" summary widgets from attendance overview; 6-month trend chart provides sufficient visual information | - |
 | 2025-12-12 | 1.3 | Added "Add Missing Attendance" button below attendance trend chart; Updated empty state with "Mark Attendance" button and clearer CTA text | - |
+| 2025-12-12 | 1.4 | Updated Family View to show 6-month trend chart for each member; Added generic "Add any missing attendance for <member name>" button for all members regardless of data availability | - |
 
 ---
 
@@ -1349,14 +1485,37 @@ ORDER BY created_at ASC;
 │                    │
 │ ATTENDANCE ▼       │
 │                    │
-│ 👧 Sarah: 20 ↗️    │
-│ ━━━━━━━━━━━━━     │
+│ 👧 Sarah           │
+│ [Trend Chart]      │
+│ ▂▄▆▇█▇             │
+│ J A S O N D        │
+│ ┌────────────────┐ │
+│ │ Add missing    │ │
+│ │ attendance for │ │
+│ │ Sarah          │ │
+│ └────────────────┘ │
+│ ───────────────    │
 │                    │
-│ 👦 Tom: 12 ↘️      │
-│ ━━━━━━━━          │
+│ 👦 Tom             │
+│ [Trend Chart]      │
+│ ▃▅▄▆▅▄             │
+│ J A S O N D        │
+│ ┌────────────────┐ │
+│ │ Add missing    │ │
+│ │ attendance for │ │
+│ │ Tom            │ │
+│ └────────────────┘ │
+│ ───────────────    │
 │                    │
-│ 👩 Mom: 8 →        │
-│ ━━━━━             │
+│ 👩 Mom             │
+│ [Trend Chart]      │
+│ ▂▃▃▄▃▂             │
+│ J A S O N D        │
+│ ┌────────────────┐ │
+│ │ Add missing    │ │
+│ │ attendance for │ │
+│ │ Mom            │ │
+│ └────────────────┘ │
 │                    │
 │ At Risk ▼          │
 │ 🔴 Swim (Tom)      │
