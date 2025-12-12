@@ -125,11 +125,20 @@ interface ClassSubscription {
 │  │  Jul Aug Sep Oct Nov Dec          │ │
 │  └───────────────────────────────────┘ │
 │                                         │
+│  ┌───────────────────────────────────┐ │
+│  │    Add Missing Attendance         │ │
+│  └───────────────────────────────────┘ │
+│                                         │
 └─────────────────────────────────────────┘
 ```
 
 **Data Displayed:**
 - **Bar Chart:** Monthly attendance for last 6 months showing visual trend
+- **Add Missing Attendance Button:** Opens the individual's class page where they can mark attendance across all their classes
+
+**Navigation:**
+- Tapping "Add Missing Attendance" navigates to the selected family member's class detail page (e.g., if viewing Sarah's insights, opens Sarah's class page)
+- This provides quick access to mark attendance without leaving the insights context
 
 **Calculations:**
 ```javascript
@@ -155,11 +164,19 @@ const trendData = months.map(month => ({
 │                                         │
 │  No attendance records yet              │
 │                                         │
-│  Mark attendance in class details       │
-│  to see patterns and trends here        │
+│  ┌───────────────────────────────────┐ │
+│  │      Mark Attendance              │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  See patterns and trends with           │
+│  up to date attendance records          │
 │                                         │
 └─────────────────────────────────────────┘
 ```
+
+**Navigation:**
+- Tapping "Mark Attendance" navigates to the selected family member's class detail page
+- This provides a direct path from empty state to taking action
 
 #### Family View
 
@@ -650,6 +667,10 @@ Add schedule to see value analysis
 │  ┌───────────────────────────────────┐ │
 │  │      ▂▄▆▇█▇                       │ │
 │  │  Jul Aug Sep Oct Nov Dec          │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │    Add Missing Attendance         │ │
 │  └───────────────────────────────────┘ │
 │                                         │
 │  Sarah's Classes                        │
@@ -1274,6 +1295,7 @@ ORDER BY created_at ASC;
 | 2025-12-12 | 1.0 | Initial PRD created | - |
 | 2025-12-12 | 1.1 | Renamed from "Analytics" to "Insights"; Changed selector from horizontal scrollable chips to dropdown | - |
 | 2025-12-12 | 1.2 | Removed "This Month" and "Last Month" summary widgets from attendance overview; 6-month trend chart provides sufficient visual information | - |
+| 2025-12-12 | 1.3 | Added "Add Missing Attendance" button below attendance trend chart; Updated empty state with "Mark Attendance" button and clearer CTA text | - |
 
 ---
 
@@ -1296,6 +1318,9 @@ ORDER BY created_at ASC;
 │                    │
 │ [Trend Chart]      │
 │ (Last 6 Months)    │
+│                    │
+│ [Add Missing       │
+│  Attendance]       │
 │                    │
 │ Classes ▼          │
 │ 🎹 Piano  2d  ✅   │
