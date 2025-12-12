@@ -19,7 +19,7 @@ const HomeIcon = ({ focused }: { focused: boolean }) => (
 
 const InsightsIcon = ({ focused }: { focused: boolean }) => (
   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-    <Text style={{ fontSize: 24 }}>{focused ? '📊' : '📈'}</Text>
+    <Text style={{ fontSize: 24 }}>{focused ? '💡' : '💡'}</Text>
   </View>
 );
 

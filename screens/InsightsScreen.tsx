@@ -6,13 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Dimensions,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRecur } from '../shared/stores/recur';
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { format, eachMonthOfInterval, subMonths, isSameMonth, isSameYear } from 'date-fns';
+import { FamilyMember, ClassAttendance, Payment } from '../shared/types/database';
 
-const { width } = Dimensions.get('window');
+interface MemberOption {
+  id: string | null;
+  label: string;
+  avatar?: string;
+}
 
 export default function InsightsScreen({ navigation }: any) {
   const {
@@ -24,8 +30,9 @@ export default function InsightsScreen({ navigation }: any) {
   } = useRecur();
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [allAttendance, setAllAttendance] = useState<any[]>([]);
-  const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [allAttendance, setAllAttendance] = useState<ClassAttendance[]>([]);
+  const [allPayments, setAllPayments] = useState<Payment[]>([]);
+  const [selectorVisible, setSelectorVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -43,75 +50,146 @@ export default function InsightsScreen({ navigation }: any) {
     loadData();
   };
 
+  const memberOptions: MemberOption[] = [
+    { id: null, label: 'All Family' },
+    ...familyMembers.map(m => ({ id: m.id, label: m.name, avatar: m.avatar })),
+  ];
+
+  const selectedOption = memberOptions.find(o => o.id === selectedMemberId) || memberOptions[0];
+
   const getFilteredData = () => {
     if (selectedMemberId) {
-      const member = familyMembers.find(m => m.id === selectedMemberId);
       return {
         attendance: allAttendance.filter(a => a.family_member_id === selectedMemberId),
         payments: allPayments.filter(p => p.family_member_id === selectedMemberId),
-        members: [member],
       };
     }
     return {
       attendance: allAttendance,
       payments: allPayments,
-      members: familyMembers,
     };
   };
 
-  const getTotalSpent = () => {
-    const { payments } = getFilteredData();
-    return payments.reduce((sum, p) => sum + p.amount, 0);
+  const { attendance, payments } = getFilteredData();
+
+  // Spending Calculations
+  const getThisMonthSpending = () => {
+    return payments
+      .filter(p => isSameMonth(new Date(p.payment_date), new Date()))
+      .reduce((sum, p) => sum + p.amount, 0);
   };
 
-  const getAttendanceTrendData = () => {
-    const { attendance } = getFilteredData();
-    const last3Months = eachMonthOfInterval({
-      start: subMonths(new Date(), 2),
+  const getThisYearSpending = () => {
+    return payments
+      .filter(p => isSameYear(new Date(p.payment_date), new Date()))
+      .reduce((sum, p) => sum + p.amount, 0);
+  };
+
+  const getSpendingTrend = () => {
+    const months = eachMonthOfInterval({
+      start: subMonths(new Date(), 5),
       end: new Date(),
     });
 
-    return last3Months.map(month => {
-      const monthStart = startOfMonth(month);
-      const monthEnd = endOfMonth(month);
-      const count = attendance.filter(a => {
-        const date = new Date(a.class_date);
-        return date >= monthStart && date <= monthEnd;
-      }).length;
-
-      return {
-        month: format(month, 'MMM'),
-        count,
-      };
-    });
+    return months.map(month => ({
+      month: format(month, 'MMM'),
+      amount: payments
+        .filter(p => isSameMonth(new Date(p.payment_date), month))
+        .reduce((sum, p) => sum + p.amount, 0),
+    }));
   };
 
-  const getExpensesByMember = () => {
-    if (selectedMemberId) {
-      return [];
-    }
+  const getMemberSpendingBreakdown = () => {
+    if (selectedMemberId) return [];
+
+    const thisMonthTotal = getThisMonthSpending();
+
+    return familyMembers
+      .map(member => {
+        const memberPayments = allPayments.filter(
+          p => p.family_member_id === member.id && isSameMonth(new Date(p.payment_date), new Date())
+        );
+        const total = memberPayments.reduce((sum, p) => sum + p.amount, 0);
+        const percentage = thisMonthTotal > 0 ? (total / thisMonthTotal) * 100 : 0;
+
+        return {
+          member,
+          amount: total,
+          percentage,
+        };
+      })
+      .filter(m => m.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  // Attendance Calculations
+  const getAttendanceTrend = () => {
+    const months = eachMonthOfInterval({
+      start: subMonths(new Date(), 5),
+      end: new Date(),
+    });
+
+    return months.map(month => ({
+      month: format(month, 'MMM'),
+      count: attendance.filter(a => isSameMonth(new Date(a.class_date), month)).length,
+    }));
+  };
+
+  const getMemberAttendanceBreakdown = () => {
+    if (selectedMemberId) return [];
 
     return familyMembers.map(member => {
-      const memberPayments = allPayments.filter(p => p.family_member_id === member.id);
-      const total = memberPayments.reduce((sum, p) => sum + p.amount, 0);
+      const memberAttendance = allAttendance.filter(a => a.family_member_id === member.id);
+      const months = eachMonthOfInterval({
+        start: subMonths(new Date(), 5),
+        end: new Date(),
+      });
+
+      const trend = months.map(month => ({
+        month: format(month, 'MMM'),
+        count: memberAttendance.filter(a => isSameMonth(new Date(a.class_date), month)).length,
+      }));
+
       return {
-        name: member.name,
-        avatar: member.avatar,
-        amount: total,
+        member,
+        trend,
+        totalCount: memberAttendance.length,
       };
-    }).filter(m => m.amount > 0);
+    }).sort((a, b) => b.totalCount - a.totalCount);
   };
 
-  const getMemberColors = () => {
-    const colors = ['#4A90E2', '#50C878', '#FFB84D', '#FF6B6B', '#9B59B6', '#3498DB'];
-    return colors;
+  const thisMonthSpending = getThisMonthSpending();
+  const thisYearSpending = getThisYearSpending();
+  const spendingTrend = getSpendingTrend();
+  const attendanceTrend = getAttendanceTrend();
+  const memberSpendingBreakdown = getMemberSpendingBreakdown();
+  const memberAttendanceBreakdown = getMemberAttendanceBreakdown();
+
+  const maxSpending = Math.max(...spendingTrend.map(d => d.amount), 1);
+  const maxAttendance = Math.max(...attendanceTrend.map(d => d.count), 1);
+
+  const hasPayments = payments.length > 0;
+  const hasAttendance = attendance.length > 0;
+
+  const handleAddPayment = () => {
+    if (selectedMemberId) {
+      navigation.navigate('FamilyMemberDetail', { memberId: selectedMemberId });
+    }
   };
 
-  const totalSpent = getTotalSpent();
-  const trendData = getAttendanceTrendData();
-  const expensesByMember = getExpensesByMember();
-  const maxTrendValue = Math.max(...trendData.map(d => d.count), 1);
-  const colors = getMemberColors();
+  const handleAddAttendance = () => {
+    if (selectedMemberId) {
+      navigation.navigate('FamilyMemberDetail', { memberId: selectedMemberId });
+    }
+  };
+
+  const handleMemberPaymentAdd = (memberId: string) => {
+    navigation.navigate('FamilyMemberDetail', { memberId });
+  };
+
+  const handleMemberAttendanceAdd = (memberId: string) => {
+    navigation.navigate('FamilyMemberDetail', { memberId });
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -121,116 +199,272 @@ export default function InsightsScreen({ navigation }: any) {
 
       <ScrollView
         style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
       >
-        <Text style={styles.sectionTitle}>Select Family Member</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.memberSelector}
-          contentContainerStyle={styles.memberSelectorContent}
-        >
+        {/* Dropdown Selector */}
+        <View style={styles.selectorSection}>
+          <Text style={styles.selectorLabel}>Select Family Member</Text>
           <TouchableOpacity
-            style={[
-              styles.memberChip,
-              selectedMemberId === null && styles.memberChipSelected,
-            ]}
-            onPress={() => setSelectedMemberId(null)}
+            style={styles.dropdown}
+            onPress={() => setSelectorVisible(true)}
           >
-            <Text
-              style={[
-                styles.memberChipText,
-                selectedMemberId === null && styles.memberChipTextSelected,
-              ]}
-            >
-              All Members
-            </Text>
+            <View style={styles.dropdownContent}>
+              {selectedOption.avatar && (
+                <Text style={styles.dropdownAvatar}>{selectedOption.avatar}</Text>
+              )}
+              <Text style={styles.dropdownText}>{selectedOption.label}</Text>
+            </View>
+            <Text style={styles.dropdownIcon}>▼</Text>
           </TouchableOpacity>
-          {familyMembers.map((member, index) => (
-            <TouchableOpacity
-              key={member.id}
-              style={[
-                styles.memberChip,
-                selectedMemberId === member.id && styles.memberChipSelected,
-              ]}
-              onPress={() => setSelectedMemberId(member.id)}
-            >
-              <Text style={styles.memberAvatar}>{member.avatar}</Text>
-              <Text
-                style={[
-                  styles.memberChipText,
-                  selectedMemberId === member.id && styles.memberChipTextSelected,
-                ]}
-              >
-                {member.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Attendance Trend</Text>
-          <View style={styles.barChart}>
-            {trendData.map((item, index) => {
-              const barHeight = maxTrendValue > 0 ? (item.count / maxTrendValue) * 120 : 0;
-              return (
-                <View key={index} style={styles.barContainer}>
-                  <View style={styles.barWrapper}>
-                    <View style={[styles.bar, { height: barHeight || 4 }]} />
-                  </View>
-                  <Text style={styles.barLabel}>{item.month}</Text>
-                  <Text style={styles.barValue}>{item.count}</Text>
-                </View>
-              );
-            })}
-          </View>
         </View>
 
-        {expensesByMember.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Expenses by Family Member</Text>
-            <View style={styles.expenseList}>
-              {expensesByMember.map((member, index) => {
-                const percentage = totalSpent > 0 ? (member.amount / totalSpent) * 100 : 0;
-                return (
-                  <View key={index} style={styles.expenseItem}>
-                    <View style={styles.expenseHeader}>
-                      <View style={styles.expenseMemberInfo}>
-                        <Text style={styles.expenseAvatar}>{member.avatar}</Text>
-                        <Text style={styles.expenseName}>{member.name}</Text>
-                      </View>
-                      <Text style={styles.expenseAmount}>${member.amount.toFixed(2)}</Text>
-                    </View>
-                    <View style={styles.progressBar}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          {
-                            width: `${percentage}%`,
-                            backgroundColor: colors[index % colors.length],
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.expensePercentage}>{percentage.toFixed(1)}%</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
+        {/* Spending Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>SPENDING INSIGHTS</Text>
 
-        {expensesByMember.length === 0 && selectedMemberId === null && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No payment data available</Text>
-            <Text style={styles.emptySubtext}>
-              Record payments to see expense distribution
-            </Text>
-          </View>
-        )}
+          {hasPayments ? (
+            <>
+              {/* Individual View */}
+              {selectedMemberId ? (
+                <>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statLabel}>This Month</Text>
+                      <Text style={styles.statValue}>${thisMonthSpending.toFixed(0)}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statLabel}>This Year</Text>
+                      <Text style={styles.statValue}>${thisYearSpending.toFixed(0)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>Monthly Spending (Last 6 Months)</Text>
+                    <View style={styles.barChart}>
+                      {spendingTrend.map((item, index) => {
+                        const barHeight = maxSpending > 0 ? (item.amount / maxSpending) * 80 : 4;
+                        return (
+                          <View key={index} style={styles.barContainer}>
+                            <View style={styles.barWrapper}>
+                              <View style={[styles.bar, { height: barHeight || 4 }]} />
+                            </View>
+                            <Text style={styles.barLabel}>{item.month}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={handleAddPayment}
+                  >
+                    <Text style={styles.actionButtonText}>
+                      Add Any Missing Payment Records for Complete Spend Analysis
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                /* Family View */
+                <>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statLabel}>This Month</Text>
+                      <Text style={styles.statValue}>${thisMonthSpending.toFixed(0)}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statLabel}>This Year</Text>
+                      <Text style={styles.statValue}>${thisYearSpending.toFixed(0)}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.subsectionTitle}>Spending by Member</Text>
+
+                  {memberSpendingBreakdown.map((item, index) => (
+                    <View key={item.member.id} style={styles.memberSpendingCard}>
+                      <View style={styles.memberSpendingHeader}>
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberAvatar}>{item.member.avatar}</Text>
+                          <Text style={styles.memberName}>{item.member.name}</Text>
+                        </View>
+                        <Text style={styles.spendingAmount}>
+                          ${item.amount.toFixed(0)} ({item.percentage.toFixed(0)}%)
+                        </Text>
+                      </View>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[styles.progressFill, { width: `${item.percentage}%` }]}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={styles.linkButton}
+                        onPress={() => handleMemberPaymentAdd(item.member.id)}
+                      >
+                        <Text style={styles.linkButtonText}>+ Add missing payments</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              )}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No payment data yet</Text>
+              <Text style={styles.emptyText}>Record payments to track:</Text>
+              <Text style={styles.emptyBullet}>• Monthly spending</Text>
+              <Text style={styles.emptyBullet}>• Yearly totals</Text>
+              <Text style={styles.emptyBullet}>• Cost per class</Text>
+              {selectedMemberId && (
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={handleAddPayment}
+                >
+                  <Text style={styles.emptyButtonText}>Record Payment</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Attendance Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ATTENDANCE INSIGHTS</Text>
+
+          {hasAttendance ? (
+            <>
+              {/* Individual View */}
+              {selectedMemberId ? (
+                <>
+                  <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>Attendance Trend (Last 6 Months)</Text>
+                    <View style={styles.barChart}>
+                      {attendanceTrend.map((item, index) => {
+                        const barHeight = maxAttendance > 0 ? (item.count / maxAttendance) * 80 : 4;
+                        return (
+                          <View key={index} style={styles.barContainer}>
+                            <View style={styles.barWrapper}>
+                              <View style={[styles.bar, { height: barHeight || 4 }]} />
+                            </View>
+                            <Text style={styles.barLabel}>{item.month}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={handleAddAttendance}
+                  >
+                    <Text style={styles.actionButtonText}>Add Missing Attendance</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                /* Family View */
+                <>
+                  <Text style={styles.subsectionTitle}>Family Attendance Comparison</Text>
+
+                  {memberAttendanceBreakdown.map((item) => {
+                    const maxTrend = Math.max(...item.trend.map(t => t.count), 1);
+                    return (
+                      <View key={item.member.id} style={styles.memberAttendanceCard}>
+                        <View style={styles.memberHeader}>
+                          <Text style={styles.memberAvatar}>{item.member.avatar}</Text>
+                          <Text style={styles.memberName}>{item.member.name}</Text>
+                        </View>
+
+                        <View style={styles.miniBarChart}>
+                          {item.trend.map((t, idx) => {
+                            const barHeight = maxTrend > 0 ? (t.count / maxTrend) * 40 : 4;
+                            return (
+                              <View key={idx} style={styles.miniBarContainer}>
+                                <View style={styles.miniBarWrapper}>
+                                  <View style={[styles.miniBar, { height: barHeight || 4 }]} />
+                                </View>
+                                <Text style={styles.miniBarLabel}>{t.month}</Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+
+                        <TouchableOpacity
+                          style={styles.memberActionButton}
+                          onPress={() => handleMemberAttendanceAdd(item.member.id)}
+                        >
+                          <Text style={styles.memberActionButtonText}>
+                            Add any missing attendance for {item.member.name}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </>
+              )}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No attendance records yet</Text>
+              {selectedMemberId && (
+                <>
+                  <TouchableOpacity
+                    style={styles.emptyButton}
+                    onPress={handleAddAttendance}
+                  >
+                    <Text style={styles.emptyButtonText}>Mark Attendance</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.emptyText}>
+                    See patterns and trends with up to date attendance records
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
+
+      {/* Dropdown Modal */}
+      <Modal
+        visible={selectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectorVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setSelectorVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            {memberOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id || 'all'}
+                style={[
+                  styles.modalOption,
+                  option.id === selectedMemberId && styles.modalOptionSelected,
+                ]}
+                onPress={() => {
+                  setSelectedMemberId(option.id);
+                  setSelectorVisible(false);
+                }}
+              >
+                {option.avatar && (
+                  <Text style={styles.modalOptionAvatar}>{option.avatar}</Text>
+                )}
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    option.id === selectedMemberId && styles.modalOptionTextSelected,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {option.id === selectedMemberId && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -256,153 +490,323 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  sectionTitle: {
+  selectorSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+  },
+  selectorLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dropdownAvatar: {
+    fontSize: 20,
+  },
+  dropdownText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    paddingHorizontal: 20,
+  },
+  dropdownIcon: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  section: {
     marginTop: 24,
-    marginBottom: 12,
-  },
-  memberSelector: {
-    marginBottom: 20,
-  },
-  memberSelectorContent: {
     paddingHorizontal: 20,
-    gap: 12,
   },
-  memberChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.5,
+    marginBottom: 16,
   },
-  memberChipSelected: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
-  },
-  memberAvatar: {
-    fontSize: 18,
-  },
-  memberChipText: {
-    fontSize: 14,
+  subsectionTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
+    marginBottom: 16,
+    marginTop: 8,
   },
-  memberChipTextSelected: {
-    color: '#FFFFFF',
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
   },
-  chartCard: {
+  statCard: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 24,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
   chartTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   barChart: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-around',
-    height: 180,
-    paddingTop: 20,
+    height: 100,
   },
   barContainer: {
     alignItems: 'center',
     flex: 1,
   },
   barWrapper: {
-    height: 120,
+    height: 80,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   bar: {
-    width: 40,
+    width: 32,
     backgroundColor: '#2563EB',
-    borderRadius: 8,
+    borderRadius: 4,
     minHeight: 4,
   },
   barLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 4,
   },
-  barValue: {
+  actionButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
-    marginTop: 2,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
-  expenseList: {
-    gap: 20,
+  memberSpendingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
   },
-  expenseItem: {
-    gap: 8,
-  },
-  expenseHeader: {
+  memberSpendingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  expenseMemberInfo: {
+  memberInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  expenseAvatar: {
+  memberAvatar: {
     fontSize: 20,
   },
-  expenseName: {
+  memberName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
   },
-  expenseAmount: {
-    fontSize: 16,
-    fontWeight: '700',
+  spendingAmount: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1F2937',
   },
   progressBar: {
-    height: 12,
+    height: 8,
     backgroundColor: '#F3F4F6',
-    borderRadius: 6,
+    borderRadius: 4,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    borderRadius: 6,
+    backgroundColor: '#2563EB',
+    borderRadius: 4,
   },
-  expensePercentage: {
+  linkButton: {
+    paddingVertical: 4,
+  },
+  linkButtonText: {
     fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  memberAttendanceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  memberHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  miniBarChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    height: 60,
+    marginBottom: 12,
+  },
+  miniBarContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  miniBarWrapper: {
+    height: 40,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  miniBar: {
+    width: 24,
+    backgroundColor: '#2563EB',
+    borderRadius: 3,
+    minHeight: 4,
+  },
+  miniBarLabel: {
+    fontSize: 9,
     color: '#6B7280',
   },
-  emptyState: {
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+  memberActionButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
-  emptyText: {
+  memberActionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  emptyState: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 12,
   },
-  emptySubtext: {
+  emptyText: {
     fontSize: 14,
     color: '#6B7280',
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  emptyBullet: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  emptyButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 16,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 8,
+    width: '80%',
+    maxHeight: '70%',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 10,
+    borderRadius: 8,
+  },
+  modalOptionSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  modalOptionAvatar: {
+    fontSize: 20,
+  },
+  modalOptionText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  modalOptionTextSelected: {
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  checkmark: {
+    fontSize: 18,
+    color: '#2563EB',
+    fontWeight: '700',
   },
 });
