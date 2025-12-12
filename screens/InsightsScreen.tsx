@@ -328,10 +328,12 @@ export default function InsightsScreen({ navigation }: any) {
                         />
                       </View>
                       <TouchableOpacity
-                        style={styles.linkButton}
+                        style={styles.memberActionButton}
                         onPress={() => handleMemberPaymentAdd(item.member.id)}
                       >
-                        <Text style={styles.linkButtonText}>+ Add missing payments</Text>
+                        <Text style={styles.memberActionButtonText}>
+                          Add any missing payments for {item.member.name}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -412,18 +414,26 @@ export default function InsightsScreen({ navigation }: any) {
                           <Text style={styles.memberName}>{item.member.name}</Text>
                         </View>
 
-                        <View style={styles.miniBarChart}>
-                          {item.trend.map((t, idx) => {
-                            const barHeight = maxTrend > 0 ? (t.count / maxTrend) * 40 : 4;
-                            return (
-                              <View key={idx} style={styles.miniBarContainer}>
-                                <View style={styles.miniBarWrapper}>
-                                  <View style={[styles.miniBar, { height: barHeight || 4 }]} />
+                        <View style={styles.miniChartContainer}>
+                          <View style={styles.miniYAxisLabels}>
+                            <Text style={styles.miniYAxisLabel}>{maxTrend}</Text>
+                            <Text style={styles.miniYAxisLabel}>{Math.round(maxTrend * 0.5)}</Text>
+                            <Text style={styles.miniYAxisLabel}>0</Text>
+                          </View>
+                          <View style={styles.miniBarChart}>
+                            {item.trend.map((t, idx) => {
+                              const barHeight = maxTrend > 0 ? (t.count / maxTrend) * 40 : 4;
+                              return (
+                                <View key={idx} style={styles.miniBarContainer}>
+                                  <View style={styles.miniBarWrapper}>
+                                    <View style={[styles.miniBar, { height: barHeight || 4 }]} />
+                                  </View>
+                                  <Text style={styles.miniBarLabel}>{t.month}</Text>
+                                  <Text style={styles.miniBarValue}>{t.count}</Text>
                                 </View>
-                                <Text style={styles.miniBarLabel}>{t.month}</Text>
-                              </View>
-                            );
-                          })}
+                              );
+                            })}
+                          </View>
                         </View>
 
                         <TouchableOpacity
@@ -729,14 +739,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     borderRadius: 4,
   },
-  linkButton: {
-    paddingVertical: 4,
-  },
-  linkButtonText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-  },
   memberAttendanceCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -751,12 +753,27 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
+  miniChartContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  miniYAxisLabels: {
+    justifyContent: 'space-between',
+    height: 60,
+    paddingVertical: 0,
+    marginRight: 8,
+  },
+  miniYAxisLabel: {
+    fontSize: 9,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   miniBarChart: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-around',
     height: 60,
-    marginBottom: 12,
   },
   miniBarContainer: {
     alignItems: 'center',
@@ -777,9 +794,16 @@ const styles = StyleSheet.create({
   miniBarLabel: {
     fontSize: 9,
     color: '#6B7280',
+    marginTop: 2,
+  },
+  miniBarValue: {
+    fontSize: 9,
+    color: '#1F2937',
+    fontWeight: '600',
+    marginTop: 2,
   },
   memberActionButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#DBEAFE',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -788,7 +812,7 @@ const styles = StyleSheet.create({
   memberActionButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#1E40AF',
   },
   emptyState: {
     backgroundColor: '#FFFFFF',

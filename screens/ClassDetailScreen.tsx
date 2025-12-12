@@ -189,11 +189,11 @@ export default function ClassDetailScreen({ route, navigation }: any) {
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const renderPayment = ({ item }: { item: Payment }) => {
+  const renderPayment = ({ item, isLast }: { item: Payment; isLast?: boolean }) => {
     const isMenuVisible = openMenuId === item.id;
 
     return (
-      <View style={styles.paymentItem}>
+      <View style={[styles.paymentItem, isLast && styles.lastPaymentItem]}>
         <View style={styles.paymentDate}>
           <Text style={styles.paymentDateText}>
             {format(new Date(item.payment_date), 'MMM d, yyyy')}
@@ -262,7 +262,6 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     { type: 'header' },
     { type: 'attendanceCalendar' },
     { type: 'paymentHeader' },
-    ...payments.map(item => ({ type: 'payment', data: item })),
     { type: 'deleteButton' },
   ];
 
@@ -406,23 +405,23 @@ export default function ClassDetailScreen({ route, navigation }: any) {
     if (item.type === 'attendanceCalendar') {
       return (
         <>
-          <AttendanceCalendar
-            attendance={attendance}
-            schedule={classData?.schedule}
-            onDeleteAttendance={handleDeleteAttendance}
-            onAddAttendance={handleMarkAttendance}
-            classStatus={classData?.status}
-          />
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.recordPaymentButton,
-              pressed && styles.recordPaymentButtonPressed,
-            ]}
-            onPress={handleRecordPayment}
-          >
-            <Text style={styles.recordPaymentButtonText}>RECORD PAYMENT</Text>
-          </Pressable>
+          <View style={styles.calendarCard}>
+            <AttendanceCalendar
+              attendance={attendance}
+              schedule={classData?.schedule}
+              onDeleteAttendance={handleDeleteAttendance}
+              onAddAttendance={handleMarkAttendance}
+              classStatus={classData?.status}
+            />
+            <TouchableOpacity
+              style={styles.addMissingButton}
+              onPress={handleMarkAttendance.bind(null, new Date())}
+            >
+              <Text style={styles.addMissingButtonText}>
+                Add any missing attendance
+              </Text>
+            </TouchableOpacity>
+          </View>
         </>
       );
     }
@@ -432,15 +431,31 @@ export default function ClassDetailScreen({ route, navigation }: any) {
         <>
           <Text style={styles.sectionTitle}>Payment History</Text>
           {payments.length === 0 && (
-            <Text style={styles.emptyText}>No payment records yet</Text>
+            <View style={styles.emptyPaymentContainer}>
+              <Text style={styles.emptyText}>No payment records yet</Text>
+            </View>
+          )}
+          {payments.length > 0 && (
+            <View style={styles.paymentsCard}>
+              {payments.map((item, index) => (
+                <View key={item.id}>
+                  {renderPayment({ item, isLast: index === payments.length - 1 })}
+                </View>
+              ))}
+              <TouchableOpacity
+                style={styles.addMissingButton}
+                onPress={handleRecordPayment}
+              >
+                <Text style={styles.addMissingButtonText}>
+                  Add any missing payments
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </>
       );
     }
 
-    if (item.type === 'payment') {
-      return renderPayment({ item: item.data });
-    }
 
     if (item.type === 'deleteButton') {
       return (
@@ -737,28 +752,42 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     opacity: 0.9,
   },
-  recordPaymentButton: {
-    backgroundColor: '#10B981',
+  calendarCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+    padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  paymentsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emptyPaymentContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  addMissingButton: {
+    backgroundColor: '#DBEAFE',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
     marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  recordPaymentButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  recordPaymentButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+  addMissingButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E40AF',
   },
   sectionTitle: {
     fontSize: 16,
@@ -829,10 +858,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingVertical: 12,
+    marginBottom: 0,
+  },
+  lastPaymentItem: {
+    borderBottomWidth: 0,
   },
   paymentDate: {
     flex: 1,
