@@ -64,11 +64,6 @@ export default function InsightsScreen({ navigation }: any) {
     return payments.reduce((sum, p) => sum + p.amount, 0);
   };
 
-  const getTotalClassesAttended = () => {
-    const { attendance } = getFilteredData();
-    return attendance.length;
-  };
-
   const getAttendanceTrendData = () => {
     const { attendance } = getFilteredData();
     const last3Months = eachMonthOfInterval({
@@ -113,7 +108,6 @@ export default function InsightsScreen({ navigation }: any) {
   };
 
   const totalSpent = getTotalSpent();
-  const totalAttended = getTotalClassesAttended();
   const trendData = getAttendanceTrendData();
   const expensesByMember = getExpensesByMember();
   const maxTrendValue = Math.max(...trendData.map(d => d.count), 1);
@@ -175,17 +169,6 @@ export default function InsightsScreen({ navigation }: any) {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        <View style={styles.summaryCards}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Spent</Text>
-            <Text style={styles.summaryValue}>${totalSpent.toFixed(2)}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Classes Attended</Text>
-            <Text style={styles.summaryValue}>{totalAttended}</Text>
-          </View>
-        </View>
 
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>Attendance Trend</Text>
@@ -313,30 +296,6 @@ const styles = StyleSheet.create({
   },
   memberChipTextSelected: {
     color: '#FFFFFF',
-  },
-  summaryCards: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  summaryValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1F2937',
   },
   chartCard: {
     backgroundColor: '#FFFFFF',
