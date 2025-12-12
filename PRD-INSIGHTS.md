@@ -118,12 +118,6 @@ interface ClassSubscription {
 │  Sarah - Attendance Overview            │
 ├─────────────────────────────────────────┤
 │                                         │
-│  ┌────────────┐  ┌────────────┐        │
-│  │This Month  │  │Last Month  │        │
-│  │    12      │  │     8      │        │
-│  │  ↗️ +4     │  │            │        │
-│  └────────────┘  └────────────┘        │
-│                                         │
 │  ┌───────────────────────────────────┐ │
 │  │  Attendance Trend (Last 6 Months) │ │
 │  │                                   │ │
@@ -135,27 +129,10 @@ interface ClassSubscription {
 ```
 
 **Data Displayed:**
-- **This Month:** Count of attendance records in current month
-- **Last Month:** Count of attendance records in previous month
-- **Trend Indicator:** Arrow showing increase/decrease vs last month
-- **Bar Chart:** Monthly attendance for last 6 months
+- **Bar Chart:** Monthly attendance for last 6 months showing visual trend
 
 **Calculations:**
 ```javascript
-// This Month
-const thisMonth = attendanceRecords.filter(a =>
-  isSameMonth(new Date(a.class_date), new Date())
-).length;
-
-// Last Month
-const lastMonth = attendanceRecords.filter(a =>
-  isSameMonth(new Date(a.class_date), subMonths(new Date(), 1))
-).length;
-
-// Change
-const change = thisMonth - lastMonth;
-const arrow = change > 0 ? '↗️' : change < 0 ? '↘️' : '→';
-
 // Trend Data (last 6 months)
 const months = eachMonthOfInterval({
   start: subMonths(new Date(), 5),
@@ -668,12 +645,6 @@ Add schedule to see value analysis
 ├─────────────────────────────────────────┤
 │  ATTENDANCE INSIGHTS                    │
 ├─────────────────────────────────────────┤
-│                                         │
-│  ┌────────────┐  ┌────────────┐        │
-│  │This Month  │  │Last Month  │        │
-│  │    12      │  │     8      │        │
-│  │  ↗️ +4     │  │            │        │
-│  └────────────┘  └────────────┘        │
 │                                         │
 │  Attendance Trend (Last 6 Months)       │
 │  ┌───────────────────────────────────┐ │
@@ -1302,6 +1273,7 @@ ORDER BY created_at ASC;
 |------|---------|---------|--------|
 | 2025-12-12 | 1.0 | Initial PRD created | - |
 | 2025-12-12 | 1.1 | Renamed from "Analytics" to "Insights"; Changed selector from horizontal scrollable chips to dropdown | - |
+| 2025-12-12 | 1.2 | Removed "This Month" and "Last Month" summary widgets from attendance overview; 6-month trend chart provides sufficient visual information | - |
 
 ---
 
@@ -1321,12 +1293,9 @@ ORDER BY created_at ASC;
 │ └────────────────┘ │
 │                    │
 │ ATTENDANCE ▼       │
-│ ┌────┐ ┌────┐     │
-│ │ 12 │ │ 8  │     │
-│ │This│ │Last│     │
-│ └────┘ └────┘     │
 │                    │
 │ [Trend Chart]      │
+│ (Last 6 Months)    │
 │                    │
 │ Classes ▼          │
 │ 🎹 Piano  2d  ✅   │
