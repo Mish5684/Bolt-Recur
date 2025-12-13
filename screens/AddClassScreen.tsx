@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 import { ScheduleItem, LocationData } from '../shared/types/database';
-import LocationSearch from '../components/LocationSearch';
+import LocationSearchModal from '../components/LocationSearchModal';
 
 const CLASS_TYPES = [
   'Academic',
@@ -58,6 +58,7 @@ export default function AddClassScreen({ route, navigation }: any) {
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showDayModal, setShowDayModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [currentDay, setCurrentDay] = useState('');
 
   const { addClass, subscribeToClass, loading } = useRecur();
@@ -131,7 +132,7 @@ export default function AddClassScreen({ route, navigation }: any) {
       </View>
 
       <View style={styles.content}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.form}>
             <Text style={styles.label}>Class Name *</Text>
@@ -197,13 +198,19 @@ export default function AddClassScreen({ route, navigation }: any) {
             )}
 
             <Text style={styles.label}>Location (Optional)</Text>
-            <View style={styles.locationSearchContainer}>
-              <LocationSearch
-                onLocationSelect={(locationData) => setLocation(locationData)}
-                placeholder="Search for class location (e.g., Artstation Khar)"
-                disabled={loading}
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowLocationModal(true);
+              }}
+              disabled={loading}
+            >
+              <Text style={location ? styles.locationButtonText : styles.locationButtonPlaceholder}>
+                {location ? location.location_name : 'Search for class location'}
+              </Text>
+              <Text style={styles.locationButtonIcon}>📍</Text>
+            </TouchableOpacity>
             {location && (
               <View style={styles.locationSelectedContainer}>
                 <Text style={styles.locationSelectedIcon}>📍</Text>
@@ -329,6 +336,16 @@ export default function AddClassScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
+
+      <LocationSearchModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onLocationSelect={(locationData) => {
+          setLocation(locationData);
+          setShowLocationModal(false);
+        }}
+        placeholder="Search for class location (e.g., Artstation Khar)"
+      />
     </View>
   );
 }
@@ -518,9 +535,28 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
   },
-  locationSearchContainer: {
-    minHeight: 60,
-    marginBottom: 12,
+  locationButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  locationButtonText: {
+    fontSize: 16,
+    color: '#1F2937',
+    flex: 1,
+  },
+  locationButtonPlaceholder: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    flex: 1,
+  },
+  locationButtonIcon: {
+    fontSize: 20,
+    marginLeft: 8,
   },
   locationSelectedContainer: {
     flexDirection: 'row',
