@@ -11,8 +11,6 @@ import {
   FlatList,
   Keyboard,
   TouchableWithoutFeedback,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 
@@ -77,11 +75,7 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
           <Text style={styles.backText}>‹ {isEditMode ? 'Edit' : 'Add'} Family Member</Text>
@@ -186,7 +180,7 @@ export default function AddFamilyMemberScreen({ navigation, route }: any) {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

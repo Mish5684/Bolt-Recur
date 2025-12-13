@@ -10,8 +10,6 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useAuth } from '../shared/stores/auth';
 
@@ -38,11 +36,7 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -134,7 +128,7 @@ export default function LoginScreen({ navigation }: any) {
         </View>
         </TouchableWithoutFeedback>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
