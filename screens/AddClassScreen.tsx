@@ -11,6 +11,8 @@ import {
   FlatList,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRecur } from '../shared/stores/recur';
 import { ScheduleItem, LocationData } from '../shared/types/database';
@@ -123,7 +125,11 @@ export default function AddClassScreen({ route, navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
           <Text style={styles.backText}>‹ Add Class</Text>
@@ -329,7 +335,7 @@ export default function AddClassScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
