@@ -65,11 +65,14 @@ export default function LocationSearch({
         GooglePlacesDetailsQuery={{
           fields: 'geometry,name,formatted_address,address_components,place_id',
         }}
-     nearbyPlacesAPI="GooglePlacesSearch"
-listViewDisplayed="auto"
-keyboardShouldPersistTaps="handled"
-listUnderlayColor="#F3F4F6"
-numberOfLines={1}
+        nearbyPlacesAPI="GooglePlacesSearch"
+        listViewDisplayed="auto"
+        keyboardShouldPersistTaps="handled"
+        listUnderlayColor="#F3F4F6"
+        numberOfLines={1}
+        flatListProps={{
+          nestedScrollEnabled: true,
+        }}
       />
       {!GOOGLE_PLACES_API_KEY && (
         <View style={styles.warningContainer}>
